@@ -1,0 +1,289 @@
+/* -- Main layout styles -- */
+
+/* 
+  dark blue:  #339
+  light blue: #CCF
+  nav blue:   #a9a9ff
+*/
+
+body {
+  margin: 1em 1em 1em 1em;
+  padding: 0px;
+  font-family: verdana, sans-serif;
+  font-size: 1.0em;
+  background-color: #FFF;  
+}
+
+/* -- Header layout/display styles -- */
+
+#header {
+  float: left;
+  width: 100%;
+  height: 5em;
+  background: #FFF url("./images/hdr.png") no-repeat bottom left;
+}
+
+#header a {
+  float: right;
+  width: 8em;
+  padding: 5px 10px 5px 10px;
+  font-size: 0.8em;
+  text-align: center;
+  text-decoration: none;
+  color: #000; /* nav text */
+  background-color: #a9a9ff; /* nav bg */
+  border-bottom: 2px solid #CCF;
+  border-right: 1px solid #CCF;
+  border-left: 1px solid #CCF;
+}
+
+#header a:hover, #header a.active {
+  padding-top: 10px;
+  color: #FFF;
+  background-color: #339; /* hover bg */
+}
+
+#header a.lastMenuItem {
+  background-image: url("/static/images/corner_tr.gif");
+  background-repeat: no-repeat;
+  background-position: top right;
+  border-right: 0px;
+}
+
+#header a.activeLastMenuItem {
+  background-image: url("/static/images/corner_tr.gif");
+  background-repeat: no-repeat;
+  background-position: top right;
+  border-right: 0px;
+  padding-top: 10px;
+  color: #FFF;
+  background-color: #339; /* dark blue */
+}
+
+/* -- Header title and subTitle layout/display styles -- */
+
+.title {
+  float: left;
+  padding: 1em 30px 0 2em;
+  font-size: 1.4em;
+  font-weight: bold;
+  font-variant: small-caps;
+  text-align: right;
+  line-height: 0.75em;
+  letter-spacing: -0.08em;
+  color: #000;
+}
+
+.subTitle {
+  display: block;
+  font-size: 0.4em;
+  font-variant: normal;
+  line-height: 1.2em;  
+  letter-spacing: 0.01em;
+  color: #F00 /* red */
+}
+
+
+
+
+
+/* -- Content layout/display styles -- */
+
+#content {
+  float: left;
+  width: 100%;
+  padding: 1em 0 1em 0;
+  background-color: #339; /* main content borders */
+}
+
+#contentLeft {
+  float: left;
+  font-size: 1.0em;
+  width: 75%;
+  margin-bottom: 1em;
+  color: #000;
+  background: #e9e9ff url("./images/corner_sub_tr-logo.png") no-repeat top right;  
+}
+
+#contentRight {
+  float: right;
+  font-size: 0.75em;
+  width: 24%;
+  color: #000;
+  background: #a9a9ff url("./images/corner_sub_tl.gif") no-repeat top left;
+}
+
+#content p {  
+  margin: 0.2em 1.2em 1.0em 1.2em;
+  font-size: 0.8em;
+  line-height: 1.8em;
+}
+
+#content a {  
+  text-decoration: none;
+  color: #339;
+  border-bottom: 1px solid #339;
+}
+
+#content a:hover {
+  color: #FFF;
+  background-color: #339;
+  border-bottom: 1px solid #EEEEEE;
+}
+
+.header, .subHeader {
+  display: block;
+  clear: both;  
+  font-weight: bold;
+  font-size: 1.0em;
+  color: #000;
+  border-bottom: 1px solid #900; /* dark red */
+  padding-top: 1em;
+}
+
+.bold {
+  font-weight: bold;
+  font-size: 0.85em;
+}
+
+.subHeader {
+  border: 0px;
+}
+
+
+
+
+
+/* -- Content left site links (large plus icon) -- */
+
+#content a.menuItem {
+  display: block;  
+  padding: 5px 0 5px 54px;
+  background: url("./images/lambda-button.gif") no-repeat center left;
+  border: 0px;
+}
+
+#content a:hover.menuItem { 
+  color: #FFF;
+  background: #339 url("./images/lambda-button-on.gif") no-repeat center left;
+  border: 0px;
+}
+
+
+
+
+
+/* -- Footer layout/display styles -- */
+
+#footer {
+  float: left;
+  width: 100%;
+  height: 3em;
+  font-size: 0.7em;
+/*  text-transform: lowercase; */
+  line-height: 2.6em;
+  color: #000;
+  background: #25509F url("./images/ftr.jpg") repeat-y top left;
+}
+
+#footerLeft {
+  float: left;
+  width: 70%;
+  height: 3em;
+  color: white;
+  text-align: left;
+  background: url("./images/corner_bl.gif") no-repeat bottom left;
+}
+
+#footerRight {
+  float: right;
+  width: 30%;
+  height: 3em;
+  text-align: right;
+  background: url("./images/corner_br.gif") no-repeat bottom right;
+}
+
+#footer a {
+  color: #e9e9ff;
+}
+
+#footer a:hover {
+  color: #666666;
+}
+
+
+
+
+/* -- Display formatting styles -- */
+
+.grey {
+  font-size: 0.9em;
+  color: #000;
+}
+
+.white {
+  color: #FFF;
+}
+
+.black {
+  color: #000;
+}
+
+acronym {
+  cursor: help;
+  border-bottom: 1px dotted #000;
+}
+
+
+
+
+
+
+/* -- <ul> tag styles -- */
+
+ul{
+  font-size: 0.8em;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  list-style-image: url("./images/lambda-tiny.gif");
+}
+
+li {
+  margin-left: 0px;
+}
+
+
+
+
+
+
+/* -- Image alignment classes -- */
+
+.imgLeft, .imgRight {
+  margin: 5px;
+}
+
+.imgLeft {
+  float: left;
+  margin-left: 0px;
+}
+
+.imgRight {
+  float: right;
+  margin-right: 0px;
+}
+
+
+
+
+
+
+/* -- Utility classes to create the bottom rounded corners -- */
+
+.bottomCorner {
+  text-align: right;
+}
+
+.vBottom {
+  vertical-align: bottom;
+}
