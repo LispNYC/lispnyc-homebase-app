@@ -1,5 +1,6 @@
 (ns org.lispnyc.webapp.homebase.feed.pebble-blog
-  (:require [net.cgrand.enlive-html :as enlive])
+  (:require [net.cgrand.enlive-html :as enlive]
+            [clj-time.format        :as time])
   (:import  [java.io.File]))
 
 (defonce blog-path "./pebbleblog-articles/blogs/")
@@ -23,6 +24,11 @@
      (let [re (re-pattern "[a-zA-Z0-9 ]")]
        (apply str (filter #(re-matches re (str %1)) input-str))))
 
+(defn get-link [blog entry]
+  (str "/blog/"
+       (first (reverse (re-seq #"\w+" (.getRoot blog)))) "/" ; get name from /data/blogs/heow/
+       (.replace (alphanumericize-input (.toLowerCase (.getTitle entry))) " " "-" )))
+
 (defn fetch-blog "Initialize a net.sourceforge.pebble.domain.Blog from the give file path and return a Clojure keyword struct."
   [blog-path]
   (initialize)
@@ -31,18 +37,20 @@
         entries (take 10 (.getBlogEntries blog-service blog))
         entry   (first (sort-by #(* -1 (.getTime (.getLastModified %1))) (filter #(.isPublished %1) entries)))]
     (if (nil? entry) nil ; filter out nill later
-      {
+      {:type       :blog-lispnyc
        :author     (.getAuthor  blog) ; entry author is username
        :title      (.getTitle   entry)
        :content    (if (= 0 (count (.getExcerpt entry)))
                      (.getContent entry)
                      (str (.getExcerpt entry)
-                          "<p><a href=\"" "/blog/"  
-                          (first (reverse (re-seq #"\w+" (.getRoot blog)))) "/" ; get name from /data/blogs/heow/
-                          (.replace (alphanumericize-input (.toLowerCase (.getTitle entry))) " " "-" )
+                          "<p><a href=\"" (get-link blog entry)
                           "\">Read more...</a></p>")) ;; direct link to article
        :mod-date   (.getLastModified entry)
-       })))
+       :pub-date   (new org.joda.time.DateTime (.getLastModified entry))
+       :link       (get-link blog entry)
+       :weight     0
+       :relevance  1}
+       )))
 
 (defn fetch-announcement []
   (fetch-blog (str blog-path "default/")))
@@ -50,9 +58,12 @@
 (defn fetch-blogs "Examine the blog-path to determine which blogs are available for initialization, ignoring empty blogs and the default (system announcement) one."
   ([] (fetch-blogs blog-path))
   ([blog-path]
+     (println "fetching blog...")
      (sort-by #(* -1 (.getTime (:mod-date %1))) ; sort by decending date
       (let [blog-dir   (. (new java.io.File blog-path) listFiles)
             blog-paths (map #(. %1 getPath) blog-dir)] ; list of blog paths
         (filter #(and (not (nil? %1)) (not (= %1 (str blog-path "default")))) ; ignore default (announcement) and empties
                 (map #(fetch-blog %1) blog-paths)))))) 
-  
+
+(defn fetch []
+  (fetch-blogs))
