@@ -1,20 +1,20 @@
 #!/bin/bash
 
-if [ -d "../lispnyc-jetty" ]; then
-  echo "found lispnyc-jetty project"
+if [ -d "../lispnyc-appserver" ]; then
+  echo "found lispnyc-appserver project"
 else
-  echo "download the lispnyc-jetty project from github"
+  echo "download the lispnyc-appserver project from github"
   exit 1
 fi
 
 lein uberwar
 
-cp home.war ../lispnyc-jetty/webapps/
-rm -rf ../lispnyc-jetty/webapps/home 2>/dev/null
-mkdir ../lispnyc-jetty/webapps/home
-pushd ../lispnyc-jetty/webapps/home
+cp home.war ../lispnyc-appserver/webapps/
+rm -rf ../lispnyc-appserver/webapps/home 2>/dev/null
+mkdir ../lispnyc-appserver/webapps/home
+pushd ../lispnyc-appserver/webapps/home
 jar -xf ../home.war 
 rm ../home.war
-echo "deployed in ../lispnyc-jetty/webapps"
+echo "deployed in ../lispnyc-appserver/webapps"
 popd 
-echo "make sure ../lispnyc-jetty is running"
+echo "make sure ../lispnyc-appserver is running"

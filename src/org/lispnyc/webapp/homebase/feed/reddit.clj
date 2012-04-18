@@ -6,7 +6,7 @@
 (defn fetch [r]
   (println "fetching subreddit " r)
   (let [data (fetch-url-xml (str "http://reddit.com/r/" r ".xml"))]
-      (map #(hash-map :type      (keyword (str "reddit-" r))
+        (map #(hash-map :type      (keyword (str "reddit-" r))
                       :title     (enlive/text (nth % 0))
                       :link      (enlive/text (nth % 1))
                       :pub-date  (parse-date (time/formatters :rfc822)

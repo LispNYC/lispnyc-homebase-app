@@ -151,41 +151,42 @@
 (def fetch-twitter-scheme  (memo/memo-ttl #(twitter/fetch "scheme") (in-min 22)))
 
 ;; store the previously-known good values as a fallback
-(def prev-google-groups   (atom []))
-(def prev-pebble-blog     (atom []))
-(def prev-hacker-news     (atom []))
-(def prev-planet-lisp     (atom []))
-(def prev-reddit-lisp     (atom []))
-(def prev-reddit-clojure  (atom []))
-(def prev-reddit-scheme   (atom []))
-(def prev-twitter-lispnyc (atom []))
-(def prev-twitter-friends (atom []))
-(def prev-twitter-clojure (atom []))
-(def prev-twitter-lisp    (atom []))
-(def prev-twitter-scheme  (atom []))
+(def previous-feed-values
+  {:google-groups     (atom [])
+   :pebble-blog       (atom [])
+   :hacker-news       (atom [])
+   :planet-lisp       (atom [])
+   :reddit-lisp       (atom [])
+   :reddit-clojure    (atom [])
+   :reddit-scheme     (atom [])
+   :twitter-lispnyc   (atom [])
+   :twitter-friends   (atom [])
+   :twitter-clojure   (atom [])
+   :twitter-lisp      (atom [])
+   :twitter-scheme    (atom [])} )
 
 ;; return last good values
 (defmacro wrap-catch [form last-good]
   `(try
-     (reset! ~last-good ~form)
-     (deref ~last-good)
-     (catch java.lang.Exception e# (deref ~last-good))))
+     (reset! (previous-feed-values ~last-good) ~form)
+     (deref  (previous-feed-values ~last-good))
+     (catch java.lang.Exception e# (deref (previous-feed-values ~last-good)))))
 
 (defn filtered-fetch []
   (apply set/union ; make one list
            (pvalues ; run them all in parallel
-            (wrap-catch (assoc-weight 10     (fetch-google-groups)) prev-google-groups)
-            (wrap-catch (assoc-weight 10     (fetch-pebble-blog)) prev-pebble-blog)
-            (wrap-catch (filter-by-keyword   (fetch-hacker-news)) prev-hacker-news)
-            (wrap-catch (assoc-weight 10     (fetch-planet-lisp)) prev-planet-lisp)
-            (wrap-catch (assoc-weight 10     (fetch-reddit-lisp)) prev-reddit-lisp)
-            (wrap-catch (assoc-weight 10     (fetch-reddit-clojure)) prev-reddit-clojure)
-            (wrap-catch (assoc-weight 10     (fetch-reddit-scheme)) prev-reddit-scheme)
-            (wrap-catch (assoc-weight 10     (fetch-twitter-lispnyc)) prev-twitter-lispnyc)
-            (wrap-catch (filter-by-keyword   (fetch-twitter-friends)) prev-twitter-friends)
-            (wrap-catch (filter-by-keyword   (fetch-twitter-clojure)) prev-twitter-clojure)
-            (wrap-catch (filter-by-keyword 2 (fetch-twitter-lisp)) prev-twitter-lisp)
-            (wrap-catch (filter-by-keyword 2 (fetch-twitter-scheme)) prev-twitter-scheme)
+            (wrap-catch (assoc-weight 10     (fetch-google-groups))   :google-groups)
+            (wrap-catch (assoc-weight 10     (fetch-pebble-blog))     :pebble-blog)
+            (wrap-catch (filter-by-keyword   (fetch-hacker-news))     :hacker-news)
+            (wrap-catch (assoc-weight 10     (fetch-planet-lisp))     :planet-lisp)
+            (wrap-catch (assoc-weight 8      (fetch-reddit-lisp))     :reddit-lisp)
+            (wrap-catch (assoc-weight 8      (fetch-reddit-clojure))  :reddit-clojure)
+            (wrap-catch (assoc-weight 8      (fetch-reddit-scheme))   :reddit-scheme)
+            (wrap-catch (assoc-weight 10     (fetch-twitter-lispnyc)) :twitter-lispnyc)
+            (wrap-catch (filter-by-keyword   (fetch-twitter-friends)) :twitter-friends)
+            (wrap-catch (filter-by-keyword   (fetch-twitter-clojure)) :twitter-clojure)
+            (wrap-catch (filter-by-keyword 2 (fetch-twitter-lisp))    :twitter-lisp)
+            (wrap-catch (filter-by-keyword 2 (fetch-twitter-scheme))  :twitter-scheme)
             )))
 
 (defn fetch

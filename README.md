@@ -13,16 +13,16 @@ the Jetty webapp framework, it requires:
   * Java
   * Clojure
   * [leiningen](https://github.com/technomancy/leiningen)  (or Maven)
-  * [lispnyc-jetty project](https://github.com/heow/lispnyc-jetty)
+  * [lispnyc-appserver project](https://github.com/lispnyc/lispnyc/lispnyc-appserver)
   
-Some resources from the [lispnyc-jetty project](https://github.com/heow/lispnyc-jetty) project are used directly here, they're symlinked (or copied) over:
+Some resources from the [lispnyc-appserver project](https://github.com/lispnyc/lispnyc-appserver) project are used directly here, they're symlinked (or copied) over:
 
-    homebase-data        -> lispnyc-jetty/homebase-data
-    pebbleblog-articles  -> lispnyc-jetty/pebbleblog-articles
+    homebase-data        -> lispnyc-appserver/homebase-data
+    pebbleblog-articles  -> lispnyc-appserver/pebbleblog-articles
     html                 -> src/html
-    src/html/static      -> lispnyc-jetty/homebase-static 
+    src/html/static      -> lispnyc-appserver/homebase-static 
 
-The *static* directory is copied directly from the lispnyc-jetty project because Jetty won't easily serve up symlinked directories.  Just keep that in mind so that HTML modifications don't get out of sync between the Standalone and WAR operation.
+The *static* directory is copied directly from the lispnyc-appserver project because Jetty won't easily serve up symlinked directories.  Just keep that in mind so that HTML modifications don't get out of sync between the Standalone and WAR operation.
 
 ## Standalone Execution
 
@@ -41,11 +41,11 @@ Look at [http://localhost:8000](http://localhost:8000)
 First a caveat: we're having trouble running the webapp as an actual
 war due to our SimpleCMS system and Clojure's compiled functions.  For
 now we just expand the LispNYC homebase WAR in the webapp directory of
-the lispnyc-jetty project. This is done by the *build-deploy.sh*
+the lispnyc-appserver project. This is done by the *build-deploy.sh*
 script.
 
     ./make-symlinks.sh # only run this once
     lein deps
     ./build-deploy.sh
 
-Ensure the [lispnyc-jetty](https://github.com/heow/lispnyc-jetty) webapp server is running and look at *http://localhost:8000*
+Ensure the [lispnyc-appserver](https://github.com/lispnyc/lispnyc-appserver) webapp server is running and look at *http://localhost:8000*

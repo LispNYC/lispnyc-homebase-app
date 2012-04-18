@@ -16,8 +16,7 @@
                          :title     (enlive/text (nth % 0))
                          :link      (enlive/text (nth % 1))
                          :pub-date  (parse-pl-date (enlive/text (nth % 2)))
-                         :weight    5  
-                         :relevance 0.8)
+                         :relevance 0.7)
               (partition 3 (enlive/select
                             data #{[:item :> :title]
                                    [:item :> :guid]

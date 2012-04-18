@@ -2,16 +2,22 @@
   (:require [org.lispnyc.webapp.homebase.simplecms        :as cms]
             [org.lispnyc.webapp.homebase.feed.pebble-blog :as pebble]
             [org.lispnyc.webapp.homebase.feed.meetup      :as meetup]
+            [org.lispnyc.webapp.homebase.feed.wiki        :as wiki]
+            [org.lispnyc.webapp.homebase.news             :as news]
+            [hiccup.core                                  :as html]
             [bcc.markdown                                 :as md]
             [ring.adapter.jetty                           :as jetty]
+            [ring.middleware.cookies                      :as cookies]
             [compojure.core                               :as ww]
             [compojure.route                              :as route]
             [net.cgrand.enlive-html                       :as enlive]
             [clojure.contrib.shell-out                    :as shell]
-            [swank.swank]
             [clj-time.core                                :as tc]
-            [clj-time.format                              :as tf])
-  (:import  [java.io File])
+            [clj-time.format                              :as tf]
+            [swank.swank])
+  (:import  [java.io]
+            [java.util]
+            [com.ecyrd.jspwiki])
   (:gen-class)) ; required for main
 
 (def homebase-data-dir "homebase-data/")
@@ -29,7 +35,7 @@
                  "\"Will write code that writes code that writes code that writes code for money.\" - on comp.lang.lisp"
                  "\"Lisp is a language for doing what you've been told is impossible.\" - Kent Pitman"
                  ]]
-    (nth sayings (rand (.size sayings))) ))
+    (nth sayings (rand (count sayings))) ))
 
 ;;
 ;; templates
@@ -84,6 +90,17 @@
    [:div#footerLeft]     (enlive/html-content (str "&nbsp;&nbsp;" (make-saying)))
    ))
 
+(defn template-wiki "do the same with the wiki data"
+  [wiki-article]
+  (enlive/template "html/template-home.html" []
+   [:title]              (enlive/content (str "New York City Lisp User Group: " (:title wiki-article)))
+   [:content]            (enlive/html-content (:content wiki-article))
+   [:span.meetingHeader] (enlive/content (:title wiki-article))
+   [:p.meetingContent]   (enlive/html-content (:content wiki-article))
+   
+   [:div#footerLeft]     (enlive/html-content (str "&nbsp;&nbsp;" (make-saying)))
+   ))
+
 ;;
 ;; pages
 ;;
@@ -91,8 +108,50 @@
 
 (defn debug-page []
   (future (swank.swank/start-repl))
-  "debugging started")
+  "Debugging started on localhost, swank on in to :4005 kind sir.")
 
+(defn get-title [item]
+  (if (empty? (:user item)) ; add user to title if there is one
+    (:title item)
+    (str (:user item) ": " (:title item))))
+
+(defn htmlify-news [items]
+  (html/html
+     [:table (map #(html/html
+                    [:tr
+                     [:td [:img {:src (str "/static/images/icon-"
+                                            (apply str (rest (str (:type %))))
+                                            "-32.png")}] ]
+                     ;; link the title if there are no embedded links
+                     [:td (if (.contains (get-title %) "href")
+                            (get-title %)
+                            [:a {:href (:link %) :target "_blank"} (get-title %)])]]) items)]) )
+
+(defn incstr [str-value]
+  (try
+    (let [v (+ 1 (Integer/parseInt str-value))]
+      (if (<= v 6) v 1)) 
+    (catch java.lang.NumberFormatException _ 1)))
+
+(defn news-title [visit]
+  (cond (= 1 visit) "LispNYC-centric"
+        (= 2 visit) "less LispNYC, more external sources"
+        (= 3 visit) "mostly by merrit"
+        (= 4 visit) "all news by relative merrit"
+        (= 5 visit) "less by merrit, more by date"
+        (= 6 visit) "most up to date news"
+        :else "All the news that fits, we print."
+        ))
+
+(defn news-page [cookies]
+  {
+   :cookies { "visits" (str (incstr (:value (cookies "visits")))) }
+   :body (let [visits  (incstr (:value (cookies "visits")))
+               content (take 30 (news/fetch visits))
+               html    (htmlify-news content)]
+           ((template-wiki {:title (str "visit: " visits " - " (news-title visits)) :content html})) )
+   })
+  
 ;;
 ;; processing
 ;; 
@@ -158,13 +217,22 @@
   (persist-form! form data-file)
   (mail-fn form))
 
-;;
-;; Jetty routes
-;;
+(defn process-wiki-or-404
+  "determine and dispatch on wiki topic, or it's a 404"
+  [request]
+  (let [uri      (:uri request)
+        topic    (apply str (rest uri)) ; strip leading slash
+        wikipage (wiki/fetch-wikipage topic)]
+    (if (empty? (:content wikipage))
+      "404 page not found"
+      ((template-wiki wikipage)))))
 
+;;
+;; jetty routes
+;;
 (ww/defroutes app-routes
   ;; avoid caching, no vars
-  (ww/GET  "/" []     ((template-index (pebble/fetch-announcement) (meetup/fetch-meetup) (first (pebble/fetch-blogs)))))
+  (ww/GET  "/" []     ((template-index (wiki/fetch-wikipage "front-page") (meetup/fetch-meetup) (first (pebble/fetch-blogs)))))
   (ww/GET  "/home" [] ((template-index (pebble/fetch-announcement) (meetup/fetch-meetup) (first (pebble/fetch-blogs)))))
 
   ;; This seriously makes me cry, call 917-825-2382 if you'd like to have
@@ -174,7 +242,8 @@
   (nth pubpath 0) (nth pubpath 1) (nth pubpath 2) (nth pubpath 3) (nth pubpath 4) (nth pubpath 5) (nth pubpath 6) (nth pubpath 7) (nth pubpath 8) (nth pubpath 9) (nth pubpath 10) (nth pubpath 11) (nth pubpath 12) (nth pubpath 13) (nth pubpath 14) (nth pubpath 15) (nth pubpath 16) (nth pubpath 17) (nth pubpath 18) (nth pubpath 19) (nth pubpath 20)
   
   (ww/GET          "/debug" [] (debug-page))
-;; (ww/GET          "/mail"  [] (mail-page))
+  (ww/GET          "/news" {cookies :cookies} (news-page cookies))
+  ;; (ww/GET          "/mail"  [] (mail-page))
 
   (ww/POST         "/soc/idea"      {params :params} (process-form params mail-idea idea-file))
   (ww/POST         "/blog-signup"   {params :params} (mail-blog-signup params))
@@ -183,7 +252,8 @@
   (ww/POST         "/contact"       {params :params} (mail-contact params))
   
   (route/files     "/" {:root "html/"})  ; not used during WAR deployment
-  (route/not-found "404 Page not found") 
+
+  (ww/GET          "/*" {params :params :as request} (process-wiki-or-404 request))
   )
 
 ;;
@@ -201,9 +271,13 @@
 (defn wrap-context "Removes the deployed servlet context from a URI when running as a deployed web application"
   [handler]
   (fn [request]
-    (if-let [servlet-req (:servlet-request request)]
+    (if-let [servlet-req (:servlet-request request)]      
       (let [context (get-context-path servlet-req)
             uri (:uri request)]
+
+        (if (nil? @wiki/servlet-context)
+          (reset! wiki/servlet-context (:servlet-context request)))
+        
         (if (.startsWith uri context)
           (handler (assoc request :uri
                           (.substring uri (.length context))))
@@ -211,7 +285,7 @@
       (handler request))))
 
 ;; note: we're not wrapping keyword-params, using a string is good for our form processing
-(ww/wrap! app-routes wrap-context)
+(ww/wrap! app-routes wrap-context cookies/wrap-cookies)
 
 ;;
 ;; standalone Jetty server, not used during WAR deployment
@@ -221,14 +295,9 @@
   (if (string? port) (start-server host (Integer/parseInt port)) ; rerun as int
       (future (jetty/run-jetty app-routes {:host host :port port})) )) ; don't wrap keyword params
 
-(comment ; testing
-  (defonce server
-    (run-jetty app-routes {:port 8000 :join? false}))
-  (.start server) 
-  (.stop server))
-
-(defn -main [& args]
+(defn -main
   "For use in standalone operation."
+  [& args]
   (if (nil? args)
     (start-server "localhost" "8000")
     (start-server (first args) (first (rest args))) ))

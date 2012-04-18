@@ -45,9 +45,8 @@
                                           :link      (:href (:attrs (nth % 0)))
                                           :title     (enlive/text (nth % 0)) #_(org.lispnyc.webapp.homebase.core/validate-input (nth % 0)) 
                                           :pub-date  (parse-hn-date (enlive/text (nth % 1)))
-                                          :weight    (/ (max 1 (str->int (.replace (enlive/text (nth % 2))
-                                                                                   " points" "")))
-                                                        10)  
+                                          :weight    (max 1 (str->int (.replace (enlive/text (nth % 2))
+                                                                                   " points" "")))  
                                           :relevance 0.7
                                           :page count)
                           (partition 3 (enlive/select
