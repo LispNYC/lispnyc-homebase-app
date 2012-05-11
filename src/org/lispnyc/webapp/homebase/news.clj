@@ -17,8 +17,12 @@
                         "alankay"
                         "mccarthy"
                         "minksy"
+                        "stallman"
+                        "rms"
+                        "esr"
                         "lisp"
                         "common-lisp"
+                        "clos"
                         "clojure"
                         "clojurescript"
                         "functional"
@@ -31,9 +35,10 @@
                         "lispnyc"
                         "lambda"
                         "abcl"
-                        "allegro"
+                        "allegro" ; catches allegrograph
                         "franz"
                         "symbolics"
+                        "ecl"
                         "prolog"
                         "cliki"
                         "comp.lang"
@@ -76,8 +81,10 @@
   (count-keywords negative-keywords sentence))
 
 (defn age-in-hours [now d]
-  (float (/ (t/in-secs (t/interval d now))
-            3600) ))
+  (if (nil? d) (do (println "WARNING: empty date!") 48) ; 2 days
+      (if (.isBefore now d) (do (println "WARNING: future date!" 0))
+          (float (/ (t/in-secs (t/interval d now))
+                    3600)))))
 
 (defn weigh [item]
   (let [now  (new org.joda.time.DateTime)

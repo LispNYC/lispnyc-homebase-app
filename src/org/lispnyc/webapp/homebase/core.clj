@@ -8,6 +8,7 @@
             [bcc.markdown                                 :as md]
             [ring.adapter.jetty                           :as jetty]
             [ring.middleware.cookies                      :as cookies]
+            [ring.middleware.params                       :as params]
             [compojure.core                               :as ww]
             [compojure.route                              :as route]
             [net.cgrand.enlive-html                       :as enlive]
@@ -127,11 +128,7 @@
                             (get-title %)
                             [:a {:href (:link %) :target "_blank"} (get-title %)])]]) items)]) )
 
-(defn incstr [str-value]
-  (try
-    (let [v (+ 1 (Integer/parseInt str-value))]
-      (if (<= v 6) v 1)) 
-    (catch java.lang.NumberFormatException _ 1)))
+(def max-pages 6)
 
 (defn news-title [visit]
   (cond (= 1 visit) "LispNYC-centric"
@@ -143,13 +140,22 @@
         :else "All the news that fits, we print."
         ))
 
-(defn news-page [cookies]
+(defn news-pager [visit]
+  [:a {:href (:link )}]  )
+
+(defn incstr [str-value]
+  (try
+    (let [v (+ 1 (Integer/parseInt str-value))]
+      (if (<= v max-pages) v 1)) 
+    (catch java.lang.NumberFormatException _ 1)))
+
+(defn news-page [cookies params]
   {
    :cookies { "visits" (str (incstr (:value (cookies "visits")))) }
    :body (let [visits  (incstr (:value (cookies "visits")))
                content (take 30 (news/fetch visits))
                html    (htmlify-news content)]
-           ((template-wiki {:title (str "visit: " visits " - " (news-title visits)) :content html})) )
+           ((template-wiki {:title (str "page: " (params "p") " visit: " visits " - " (news-title visits)) :content html})) )
    })
   
 ;;
@@ -242,7 +248,7 @@
   (nth pubpath 0) (nth pubpath 1) (nth pubpath 2) (nth pubpath 3) (nth pubpath 4) (nth pubpath 5) (nth pubpath 6) (nth pubpath 7) (nth pubpath 8) (nth pubpath 9) (nth pubpath 10) (nth pubpath 11) (nth pubpath 12) (nth pubpath 13) (nth pubpath 14) (nth pubpath 15) (nth pubpath 16) (nth pubpath 17) (nth pubpath 18) (nth pubpath 19) (nth pubpath 20)
   
   (ww/GET          "/debug" [] (debug-page))
-  (ww/GET          "/news" {cookies :cookies} (news-page cookies))
+  (ww/GET          "/news" {params :params cookies :cookies} (news-page cookies params))
   ;; (ww/GET          "/mail"  [] (mail-page))
 
   (ww/POST         "/soc/idea"      {params :params} (process-form params mail-idea idea-file))
@@ -285,7 +291,7 @@
       (handler request))))
 
 ;; note: we're not wrapping keyword-params, using a string is good for our form processing
-(ww/wrap! app-routes wrap-context cookies/wrap-cookies)
+(ww/wrap! app-routes wrap-context cookies/wrap-cookies params/wrap-params)
 
 ;;
 ;; standalone Jetty server, not used during WAR deployment
