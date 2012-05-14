@@ -15,6 +15,6 @@ mkdir ../lispnyc-appserver/webapps/home
 pushd ../lispnyc-appserver/webapps/home
 jar -xf ../home.war 
 rm ../home.war
-echo "deployed in ../lispnyc-appserver/webapps"
 popd 
+echo "deployed in ../lispnyc-appserver/webapps"
 echo "make sure ../lispnyc-appserver is running"

@@ -3,22 +3,23 @@
 if [ -d "../lispnyc-appserver" ]; then
   echo "found lispnyc-appserver project"
 else
-  echo "download the lispnyc-appserver project from github"
+  echo "download the lispnyc-appserver project from github and put it"
+  echo "as a peer directory here: ../lispnyc-appserver"
   exit 1
 fi
 
 if [ -h "pebbleblog-articles" ]; then
-  echo "only run this once!  exiting"
+  echo "only run this script once!  exiting"
   exit 1
 fi
 
 ln -s $PWD/../lispnyc-appserver/pebbleblog-articles .
-ln -s $PWD/../lispnyc-appserver/homebase-data .
 ln -s $PWD/../lispnyc-appserver/etc .
 ln -s $PWD/src/html .
 
 # ok I lied, Jetty dosen't like symlinks for routed files, we'll copy them over
 # remember to keep them in sync and out of github
+echo "NOTE: changes made to src/html/static need to be mirrored in ../lispnyc-appserver/homebase-static"
 cp -vr $PWD/../lispnyc-appserver/homebase-static src/html/static
 
 echo "forcing some build deps not in the maven or clojar repos..."
