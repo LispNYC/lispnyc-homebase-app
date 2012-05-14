@@ -14,7 +14,7 @@ the Jetty webapp framework, it requires:
   * Clojure
   * [leiningen](https://github.com/technomancy/leiningen)
   * [Maven](http://maven.apache.org/) - version in Linux distros is fine
-  * [lispnyc-appserver project](https://github.com/lispnyc/lispnyc/lispnyc-appserver)
+  * [lispnyc-appserver project](https://github.com/lispnyc/lispnyc-appserver)
   
 Some resources from the [lispnyc-appserver project](https://github.com/lispnyc/lispnyc-appserver) project are used directly here, they're symlinked (or copied) over:
 
