@@ -3,6 +3,7 @@
             [org.lispnyc.webapp.homebase.feed.pebble-blog :as pebble]
             [org.lispnyc.webapp.homebase.feed.meetup      :as meetup]
             [org.lispnyc.webapp.homebase.feed.wiki        :as wiki]
+            [org.lispnyc.webapp.homebase.feed.util        :as util] 
             [org.lispnyc.webapp.homebase.news             :as news]
             [hiccup.core                                  :as html]
             [bcc.markdown                                 :as md]
@@ -116,7 +117,27 @@
     (:title item)
     (str (:user item) ": " (:title item))))
 
-(defn htmlify-news [items]
+(def max-pages 6)
+
+(defn news-title [visit]
+  (cond (= 1 visit) "LispNYC News"
+        (= 2 visit) "Lisp News: with more planetary sources"
+        (= 3 visit) "Lisp News: weighed mostly by merrit"
+        (= 4 visit) "Lisp News: all news by relative merrit"
+        (= 5 visit) "Lisp News: weighed less by merrit, more by date"
+        (= 6 visit) "Lisp News: most up to date news"
+        :else "All the news that fits, we print."
+        ))
+
+(defn news-pager [visit]
+  (html/html
+   (if (> visit 1) [:a {:href (str "/news?p=" (max 1 (- visit 1)))} "&lt; better "])
+   (map #(vec (if (= visit %) (list :bold (str "&nbsp;" visit "&nbsp;"))
+                  (list :a {:href (str "/news?p=" %)} (str "&nbsp;" % "&nbsp;")) ))
+        (range 1 (+ 1 max-pages)))
+   (if (< visit max-pages) [:a {:href (str "/news?p=" (min max-pages (+ visit 1)))} " newer &gt;"]) ))
+
+(defn htmlify-news [items page]
   (html/html
      [:table (map #(html/html
                     [:tr
@@ -126,22 +147,10 @@
                      ;; link the title if there are no embedded links
                      [:td (if (.contains (get-title %) "href")
                             (get-title %)
-                            [:a {:href (:link %) :target "_blank"} (get-title %)])]]) items)]) )
-
-(def max-pages 6)
-
-(defn news-title [visit]
-  (cond (= 1 visit) "LispNYC-centric"
-        (= 2 visit) "less LispNYC, more external sources"
-        (= 3 visit) "mostly by merrit"
-        (= 4 visit) "all news by relative merrit"
-        (= 5 visit) "less by merrit, more by date"
-        (= 6 visit) "most up to date news"
-        :else "All the news that fits, we print."
-        ))
-
-(defn news-pager [visit]
-  [:a {:href (:link )}]  )
+                            [:a {:href (:link %) :target "_blank"} (get-title %)])]]) items)]
+     [:hr]
+     [:p (news-pager page)]
+     ))
 
 (defn incstr [str-value]
   (try
@@ -152,10 +161,12 @@
 (defn news-page [cookies params]
   {
    :cookies { "visits" (str (incstr (:value (cookies "visits")))) }
-   :body (let [visits  (incstr (:value (cookies "visits")))
-               content (take 30 (news/fetch visits))
-               html    (htmlify-news content)]
-           ((template-wiki {:title (str "page: " (params "p") " visit: " visits " - " (news-title visits)) :content html})) )
+   :body (let [vp      (let [visits  (incstr (:value (cookies "visits")))
+                             page    (util/str->int (params "p"))]
+                         (if (> page 0) page visits))
+               content (take 30 (news/fetch vp))
+               html    (htmlify-news content vp)]
+           ((template-wiki {:title (news-title vp) :content html})) )
    })
   
 ;;
