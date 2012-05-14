@@ -1,12 +1,10 @@
 (ns org.lispnyc.webapp.homebase.core
-  (:require [org.lispnyc.webapp.homebase.simplecms        :as cms]
-            [org.lispnyc.webapp.homebase.feed.pebble-blog :as pebble]
+  (:require [org.lispnyc.webapp.homebase.feed.pebble-blog :as pebble]
             [org.lispnyc.webapp.homebase.feed.meetup      :as meetup]
             [org.lispnyc.webapp.homebase.feed.wiki        :as wiki]
             [org.lispnyc.webapp.homebase.feed.util        :as util] 
             [org.lispnyc.webapp.homebase.news             :as news]
             [hiccup.core                                  :as html]
-            [bcc.markdown                                 :as md]
             [ring.adapter.jetty                           :as jetty]
             [ring.middleware.cookies                      :as cookies]
             [ring.middleware.params                       :as params]
@@ -63,33 +61,12 @@
                                                    (if (.contains (:venue meeting) "Google")
                                                      "<br><br>You <a href=\"/meeting/rsvp\">must RSVP here</a> or at <a target=\"_blank\" href=\"http://www.meetup.com/LispNYC/\">Meetup</a>" "")
                                                    "</p>"))
-
    ;; blog entry
    [:span.blogHeader] (enlive/html-content (str "latest blog - <i>" (:title blog) "</i> by " (:author blog)))
    [:p.blogContent]   (enlive/html-content (str (:content blog) "<p><a href=\"/blog/\">more articles by LispNYC members</a></p>"))
 
    ;; witty saying
    [:div#footerLeft]     (enlive/html-content (str "&nbsp;&nbsp;" (make-saying)))   
-   ))
-
-(defn template-article "Associate the article data with the html selecting template based on article section."
-  [article]
-  (enlive/template
-   (str "html/template-" ;; default to home template
-        (if (= 0 (count (:section article))) "home" (:section article))
-        ".html") []
-   ;; metadata is tricky
-   [(and (enlive/has [:meta]) (enlive/attr-has :name "description"))] (enlive/set-attr :content (:description article))
-   [(and (enlive/has [:meta]) (enlive/attr-has :name "keywords"))]    (enlive/set-attr :content (apply str (interpose "," (:tags article)))) ; list to readable string
-   [(and (enlive/has [:meta]) (enlive/attr-has :name "author"))]      (enlive/set-attr :content (:author article))
-   
-   [:title]              (enlive/content (str "New York City Lisp User Group: " (:title article)))
-   [:content]            (enlive/content (:description article))
-   [:span.meetingHeader] (enlive/content (:title article))
-   [:p.meetingContent]   (enlive/html-content
-                          (md/markdown-to-html (:content article)))
-   
-   [:div#footerLeft]     (enlive/html-content (str "&nbsp;&nbsp;" (make-saying)))
    ))
 
 (defn template-wiki "do the same with the wiki data"
@@ -106,8 +83,6 @@
 ;;
 ;; pages
 ;;
-(def pubpath (cms/publish-path (str homebase-data-dir "simplecms-articles") #".*\.txt" template-article))
-
 (defn debug-page []
   (future (swank.swank/start-repl))
   "Debugging started on localhost, swank on in to :4005 kind sir.")
@@ -251,12 +226,6 @@
   ;; avoid caching, no vars
   (ww/GET  "/" []     ((template-index (wiki/fetch-wikipage "front-page") (meetup/fetch-meetup) (first (pebble/fetch-blogs)))))
   (ww/GET  "/home" [] ((template-index (pebble/fetch-announcement) (meetup/fetch-meetup) (first (pebble/fetch-blogs)))))
-
-  ;; This seriously makes me cry, call 917-825-2382 if you'd like to have
-  ;; a nice long conversation about compling Clojoure functions.
-  ;; Pour yourself a drink first.
-  ;; unable to ues (publish-path "data" #".*\.txt") in a WAR
-  (nth pubpath 0) (nth pubpath 1) (nth pubpath 2) (nth pubpath 3) (nth pubpath 4) (nth pubpath 5) (nth pubpath 6) (nth pubpath 7) (nth pubpath 8) (nth pubpath 9) (nth pubpath 10) (nth pubpath 11) (nth pubpath 12) (nth pubpath 13) (nth pubpath 14) (nth pubpath 15) (nth pubpath 16) (nth pubpath 17) (nth pubpath 18) (nth pubpath 19) (nth pubpath 20)
   
   (ww/GET          "/debug" [] (debug-page))
   (ww/GET          "/news" {params :params cookies :cookies} (news-page cookies params))
