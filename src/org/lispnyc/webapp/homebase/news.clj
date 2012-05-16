@@ -5,6 +5,7 @@
             [clojure.string                                 :as string]
             [clj-time.core                                  :as t]
             [clj-time.format                                :as tfmt]
+            [net.cgrand.enlive-html                         :as enlive]
             [org.lispnyc.webapp.homebase.feed.google-groups :as goog]
             [org.lispnyc.webapp.homebase.feed.pebble-blog   :as blog]
             [org.lispnyc.webapp.homebase.feed.reddit        :as reddit]
@@ -18,11 +19,12 @@
                         "mccarthy"
                         "minksy"
                         "stallman"
+                        "sussman"
                         "rms"
                         "esr"
                         "lisp"
                         "common-lisp"
-                        "clos"
+                        "clos " ; not close
                         "clojure"
                         "clojurescript"
                         "functional"
@@ -49,9 +51,16 @@
                         "meta"
                         "elisp"
                         "emacs"
+                        "light table"
+                        "lighttable"
                         "robot"
                         "artificial intelligence"
-                        " ai "])
+                        "meta-program"
+                        "metaprogram"
+                        "meta program"
+                        "self-modify"
+                        "self modify"
+                        " ai " ])
 
 (def negative-keywords ["pronounce"
                         "pronouncing"
@@ -65,6 +74,7 @@
                         "scheme_bot" ; too spammy
                         "ponzi"
                         "ponsi"
+                        "schemes"
                         "replac" ; repl is part of a word
                         ])
 
@@ -79,6 +89,29 @@
 
 (defn count-negative-keywords [sentence]
   (count-keywords negative-keywords sentence))
+
+;; TODO: make faster
+;; http://shenfeng.me/using-tagsoup-extract-text-from-html.html
+(defn- emit-str [node]
+  (cond (string? node) node
+        (and (:tag node)
+             (not= :script (:tag node))) (emit-str (:content node))
+             (seq? node) (map emit-str node)
+             :else ""))
+
+;; html parsing
+(defn extract-text [html]
+  (when html
+    (let [r (enlive/html-resource (java.io.StringReader. html))]
+      (string/trim (apply str (flatten (emit-str r)))))))
+
+(defn remove-punct "remove all punctuation, leaving words"
+  [s]
+  (apply str (filter #(re-matches #"[a-zA-Z\\ ]" (str %1))
+                     (string/lower-case s))))
+
+(defn get-wordset "return a set of words, without punction or html"
+  [n] (set (.split #" " (remove-punct (extract-text n)))))
 
 (defn age-in-hours [now d]
   (if (nil? d) (do (println "WARNING: empty date!") 48) ; 2 days
@@ -104,23 +137,53 @@
 (defn filter-by-keyword
   "must contain positive keywords and not contain any negative"
   ([pos-count records]
-     (filter #(and (>= (count-positive-keywords (:title %)) pos-count)
-                   (=  (count-negative-keywords (:title %)) 0) )
-             records))
+     (vec (filter #(and (>= (count-positive-keywords (:title %)) pos-count)
+                        (=  (count-negative-keywords (:title %)) 0) )
+                  records)))
   ([records] (filter-by-keyword 1 records)))
 
-(defn make-dec-vec
-  "make a vec: [5 4 3 2 1 0 0 0 0]"
+(defn make-dec-vec "make a vec: [5 4 3 2 1 0 0 0 0]"
   [max-val len]
   (take len (apply conj (vec (reverse (range 1 (+ 1 max-val))))
                         (vec (repeat (max 1 (- len max-val))  0)) )) )
 
-(defn assoc-weight
-  "[{}{}{}] => [{:rw 3}{:rw 2}{:rw 1}]"
+(defn assoc-weight "[{}{}{}] => [{:rw 3}{:rw 2}{:rw 1}]"
   [max-val vec-recs]
   (vec (map #(assoc %1 :weight %2)
             vec-recs
             (make-dec-vec max-val (count vec-recs)) )))
+
+(defn assoc-words
+  "add wordset to each record, this is to find duplicates"
+  [vec-recs] (vec (map #(assoc % :words (get-wordset (:title %))) vec-recs)))
+
+(defn in? "true if seq contains e"
+  [seq e] (some #(= e %) seq))
+
+(def duplicate-threshold 0.7) ; 70% the same
+
+;; TODO: optimize
+(defn- find-dupes [recs]
+  (if (empty? recs) '()
+      (cons (if (not (in? (let [f (first recs)
+                                r (rest recs)]
+                            (if (<= (count (:words f)) 4) [false] 
+                                (map #(if (> (/ (count (clojure.set/intersection
+                                                        (:words f) (:words %)))
+                                                (max 1 (count (:words f))))
+                                             0.7)
+                                        (do
+                                          (println "dupicate A: " (extract-text (:title f)))
+                                          (println "dupicate B: " (extract-text (:title %)))
+                                          true)) r)) )
+                          true))
+              (first recs))
+            (find-dupes (rest recs))) ))
+
+(defn remove-dupes
+  "remove duplicate records, uses wordsets (:words)"
+  [vec-recs]
+  (filter #(not (nil? %)) (find-dupes vec-recs)))
 
 ;; code-style is for thinking and debugging
 (defn weigh-and-sort [visits items]
@@ -135,13 +198,13 @@
                 (= 5 visits) 1
                 :else        0)
         now     (now)]
-    (println "v: " visits "r: " r " w: " w)
+    (comment println "v: " visits "r: " r " w: " w)
     (reverse (sort-by #(+ (* r  (:relevance %))
                           (* w  (:weight %))
-                          (* -1 (age-in-hours now (:pub-date %)))) items))))
+                          (* -1 (max 1 (age-in-hours now (:pub-date %))))) items))))
 
-(defn in-hrs [seconds] (int (* seconds 1000 60 60)))
-(defn in-min [seconds] (int (* seconds 1000 60)))
+(defn in-hrs [n] (int (* n 1000 60 60)))
+(defn in-min [n] (int (* n 1000 60)))
 
 ;; memoize the working functions by time
 (def fetch-google-groups   (memo/memo-ttl #(goog/fetch)             (in-hrs 4)))
@@ -157,8 +220,8 @@
 (def fetch-twitter-lisp    (memo/memo-ttl #(twitter/fetch "lisp")   (in-hrs 1.5)))
 (def fetch-twitter-scheme  (memo/memo-ttl #(twitter/fetch "scheme") (in-min 22)))
 
-;; store the previously-known good values as a fallback
-(def previous-feed-values
+;; store the good values
+(def feed-vecs
   {:google-groups     (atom [])
    :pebble-blog       (atom [])
    :hacker-news       (atom [])
@@ -172,31 +235,32 @@
    :twitter-lisp      (atom [])
    :twitter-scheme    (atom [])} )
 
-;; return last good values
+;; return last good values during an error
 (defmacro wrap-catch [form last-good]
   `(try
-     (reset! (previous-feed-values ~last-good) ~form)
-     (deref  (previous-feed-values ~last-good))
-     (catch java.lang.Exception e# (deref (previous-feed-values ~last-good)))))
+     (reset! (feed-vecs ~last-good) ~form)
+     (deref  (feed-vecs ~last-good))
+     (catch java.lang.Exception e# (deref (feed-vecs ~last-good)))))
 
 (defn filtered-fetch []
-  (apply set/union ; make one list
-           (pvalues ; run them all in parallel
-            (wrap-catch (assoc-weight 10     (fetch-google-groups))   :google-groups)
-            (wrap-catch (assoc-weight 10     (fetch-pebble-blog))     :pebble-blog)
-            (wrap-catch (filter-by-keyword   (fetch-hacker-news))     :hacker-news)
-            (wrap-catch (assoc-weight 10     (fetch-planet-lisp))     :planet-lisp)
-            (wrap-catch (assoc-weight 8      (fetch-reddit-lisp))     :reddit-lisp)
-            (wrap-catch (assoc-weight 8      (fetch-reddit-clojure))  :reddit-clojure)
-            (wrap-catch (assoc-weight 8      (fetch-reddit-scheme))   :reddit-scheme)
-            (wrap-catch (assoc-weight 10     (fetch-twitter-lispnyc)) :twitter-lispnyc)
-            (wrap-catch (filter-by-keyword   (fetch-twitter-friends)) :twitter-friends)
-            (wrap-catch (filter-by-keyword   (fetch-twitter-clojure)) :twitter-clojure)
-            (wrap-catch (filter-by-keyword 2 (fetch-twitter-lisp))    :twitter-lisp)
-            (wrap-catch (filter-by-keyword 2 (fetch-twitter-scheme))  :twitter-scheme)
-            )))
+  (remove-dupes
+   (do ;; release the threads!
+     (.start (Thread. #(wrap-catch (assoc-words (assoc-weight 10     (fetch-google-groups)))   :google-groups)))
+     (.start (Thread. #(wrap-catch (assoc-words (assoc-weight 10     (fetch-pebble-blog)))     :pebble-blog)))
+     (.start (Thread. #(wrap-catch (assoc-words (filter-by-keyword   (fetch-hacker-news)))     :hacker-news)))
+     (.start (Thread. #(wrap-catch (assoc-words (assoc-weight 10     (fetch-planet-lisp)))     :planet-lisp)))
+     (.start (Thread. #(wrap-catch (assoc-words (assoc-weight 8      (fetch-reddit-lisp)))     :reddit-lisp)))
+     (.start (Thread. #(wrap-catch (assoc-words (assoc-weight 8      (fetch-reddit-clojure)))  :reddit-clojure)))
+     (.start (Thread. #(wrap-catch (assoc-words (assoc-weight 8      (fetch-reddit-scheme)))   :reddit-scheme)))
+     (.start (Thread. #(wrap-catch (assoc-words (assoc-weight 10     (fetch-twitter-lispnyc))) :twitter-lispnyc)))
+     (.start (Thread. #(wrap-catch (assoc-words (filter-by-keyword   (fetch-twitter-friends))) :twitter-friends)))
+     (.start (Thread. #(wrap-catch (assoc-words (filter-by-keyword   (fetch-twitter-clojure))) :twitter-clojure)))
+     (.start (Thread. #(wrap-catch (assoc-words (filter-by-keyword 2 (fetch-twitter-lisp)))    :twitter-lisp)))
+     (.start (Thread. #(wrap-catch (assoc-words (filter-by-keyword 2 (fetch-twitter-scheme)))  :twitter-scheme)))
+      
+     ;; meh, send back whatever happens to be in our buckets
+     (vec (flatten (map deref (vals feed-vecs)))) )))
 
 (defn fetch
   ([visits] (weigh-and-sort visits (filtered-fetch)))
   ([]       (weigh-and-sort 1 (filtered-fetch))))
-

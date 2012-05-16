@@ -25,8 +25,7 @@
 (def rsvp-file (str homebase-data-dir "rsvp-meeting.txt"))
 
 (defn make-saying []
-  (let [sayings [
-                 "LispNYC: Providing parenthesis to New York since 2002"
+  (let [sayings ["LispNYC: Providing parenthesis to New York since 2002"
                  "\"A language that doesn't affect the way you think about programming, is not worth knowing.\" - Alan Perlis"
                  "\"Like DNA, such a language [Lisp] does not go out of style.\" - Paul Graham, ANSI Common Lisp"
                  "\"Only the creatively intelligent can prosper in the Lisp world.\" - Richard Gabriel"
@@ -107,8 +106,8 @@
 (defn news-pager [visit]
   (html/html
    (if (> visit 1) [:a {:href (str "/news?p=" (max 1 (- visit 1)))} "&lt; better "])
-   (map #(vec (if (= visit %) (list :bold (str "&nbsp;" visit "&nbsp;"))
-                  (list :a {:href (str "/news?p=" %)} (str "&nbsp;" % "&nbsp;")) ))
+   (map #(vec (if (= visit %) (list :bold (str " " visit " "))
+                  (list :a {:href (str "/news?p=" %)} (str " " % " ")) ))
         (range 1 (+ 1 max-pages)))
    (if (< visit max-pages) [:a {:href (str "/news?p=" (min max-pages (+ visit 1)))} " newer &gt;"]) ))
 
