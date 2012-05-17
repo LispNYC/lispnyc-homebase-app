@@ -20,13 +20,15 @@
                         "minksy"
                         "stallman"
                         "sussman"
-                        "rms"
-                        "esr"
+                        " rms "
+                        " esr "
                         "lisp"
                         "common-lisp"
                         "clos " ; not close
                         "clojure"
                         "clojurescript"
+                        "concurrency"
+                        "multiple"
                         "functional"
                         "repl"
                         "lein"
@@ -40,7 +42,7 @@
                         "allegro" ; catches allegrograph
                         "franz"
                         "symbolics"
-                        "ecl"
+                        " ecl "
                         "prolog"
                         "cliki"
                         "comp.lang"
@@ -115,7 +117,7 @@
 
 (defn age-in-hours [now d]
   (if (nil? d) (do (println "WARNING: empty date!") 48) ; 2 days
-      (if (.isBefore now d) (do (println "WARNING: future date!" 0))
+      (if (.isBefore now d) (do (println "WARNING: future date!") 0)
           (float (/ (t/in-secs (t/interval d now))
                     3600)))))
 
@@ -147,9 +149,12 @@
   (take len (apply conj (vec (reverse (range 1 (+ 1 max-val))))
                         (vec (repeat (max 1 (- len max-val))  0)) )) )
 
+(defn ensure-num "ensure input is an actual number"
+  [n] (if (number? n) n 0))
+
 (defn assoc-weight "[{}{}{}] => [{:rw 3}{:rw 2}{:rw 1}]"
   [max-val vec-recs]
-  (vec (map #(assoc %1 :weight %2)
+  (vec (map #(assoc %1 :weight (ensure-num %2))
             vec-recs
             (make-dec-vec max-val (count vec-recs)) )))
 
@@ -173,8 +178,8 @@
                                                 (max 1 (count (:words f))))
                                              0.7)
                                         (do
-                                          (println "dupicate A: " (extract-text (:title f)))
-                                          (println "dupicate B: " (extract-text (:title %)))
+                                          (comment println "dupicate A: " (apply str (take 10 (extract-text (:title f)))))
+                                          (comment println "dupicate B: " (apply str (take 10 (extract-text (:title %)))))
                                           true)) r)) )
                           true))
               (first recs))
@@ -199,9 +204,9 @@
                 :else        0)
         now     (now)]
     (comment println "v: " visits "r: " r " w: " w)
-    (reverse (sort-by #(+ (* r  (:relevance %))
-                          (* w  (:weight %))
-                          (* -1 (max 1 (age-in-hours now (:pub-date %))))) items))))
+    (reverse (sort-by #(+ (* r  (ensure-num (:relevance %)))
+                          (* w  (ensure-num (:weight %)))
+                          (* -1 (max 1 (age-in-hours now (:pub-date %)))) ) items))))
 
 (defn in-hrs [n] (int (* n 1000 60 60)))
 (defn in-min [n] (int (* n 1000 60)))
@@ -214,11 +219,11 @@
 (def fetch-reddit-lisp     (memo/memo-ttl #(reddit/fetch "lisp")    (in-hrs 1.1)))
 (def fetch-reddit-clojure  (memo/memo-ttl #(reddit/fetch "clojure") (in-hrs 1.2)))
 (def fetch-reddit-scheme   (memo/memo-ttl #(reddit/fetch "scheme")  (in-hrs 1.3)))
-(def fetch-twitter-lispnyc (memo/memo-ttl #(twitter/fetch)          (in-min 20)))
-(def fetch-twitter-friends (memo/memo-ttl #(twitter/fetch-friends)  (in-min 21)))
-(def fetch-twitter-clojure (memo/memo-ttl #(twitter/fetch "clojure")(in-hrs 1.4)))
-(def fetch-twitter-lisp    (memo/memo-ttl #(twitter/fetch "lisp")   (in-hrs 1.5)))
-(def fetch-twitter-scheme  (memo/memo-ttl #(twitter/fetch "scheme") (in-min 22)))
+(def fetch-twitter-lispnyc (memo/memo-ttl #(twitter/fetch)          (in-min 21)))
+(def fetch-twitter-friends (memo/memo-ttl #(twitter/fetch-friends)  (in-min 22)))
+(def fetch-twitter-clojure (memo/memo-ttl #(twitter/fetch "clojure")(in-hrs 23)))
+(def fetch-twitter-lisp    (memo/memo-ttl #(twitter/fetch "lisp")   (in-hrs 24)))
+(def fetch-twitter-scheme  (memo/memo-ttl #(twitter/fetch "scheme") (in-min 25)))
 
 ;; store the good values
 (def feed-data
