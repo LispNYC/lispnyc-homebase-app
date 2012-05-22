@@ -20,7 +20,7 @@ ln -s $PWD/src/html .
 # ok I lied, Jetty dosen't like symlinks for routed files, we'll copy them over
 # remember to keep them in sync and out of github
 echo "NOTE: changes made to src/html/static need to be mirrored in ../lispnyc-appserver/homebase-static"
-cp -vr $PWD/../lispnyc-appserver/homebase-static/* src/html/static
+#cp -vr $PWD/../lispnyc-appserver/homebase-static/* src/html/static
 
 echo "forcing some build deps not in the maven or clojar repos..."
 
