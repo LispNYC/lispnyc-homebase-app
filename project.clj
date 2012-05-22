@@ -15,6 +15,7 @@
                  [clojure-twitter "1.2.6-SNAPSHOT"] 
                  [com.ecyrd/jspwiki "2.8.4"]
                  [org.clojure/core.memoize "0.5.1"]
+                 [png-extract "1.0.3"]
                  [org.clojars.gfodor/commons-lang "2.5"] ; wiki dep
                  [org.clojars.aaroniba/log4j "1.2.16"]   ; wiki dep
                  [javax.servlet.jsp "2.1.0.v201004190952"] ; wiki dep
