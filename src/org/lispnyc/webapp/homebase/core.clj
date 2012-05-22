@@ -39,10 +39,10 @@
 (defn make-ad
   "Randomly select a PNG file from the ad directory, comment is url"
   []
-  (let [adpath "/static/images/ads/"
+  (let [adpath "static/images/ads/"
         file   (rand-nth
                 (filter #(.endsWith (.getName %) ".png")
-                        (file-seq (clojure.java.io/file (str "./html" adpath)))))
+                        (file-seq (clojure.java.io/file (str "./homebase-" adpath)))))
         path   (str adpath (.getName file)) 
         url    (extract.PNGExtractText/getComment
                 (new java.io.FileInputStream file))]

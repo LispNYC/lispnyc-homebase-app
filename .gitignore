@@ -1,2 +1,4 @@
 lib
 *.log
+src/html/static/
+homebase-static/
