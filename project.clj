@@ -16,15 +16,13 @@
                  [com.ecyrd/jspwiki "2.8.4"]
                  [org.clojure/core.memoize "0.5.1"]
                  [png-extract "1.0.3"]
-                 [org.clojars.gfodor/commons-lang "2.5"] ; wiki dep
-                 [org.clojars.aaroniba/log4j "1.2.16"]   ; wiki dep
-                 [javax.servlet.jsp "2.1.0.v201004190952"] ; wiki dep
+                 [org.clojars.gfodor/commons-lang "2.5"] ; wiki 
+                 [org.clojars.aaroniba/log4j "1.2.16"]   ; wiki 
+                 [javax.servlet.jsp "2.1.0.v201004190952"] ; wiki
                  [javax.mail.glassfish "1.4.1.v201005082020"] ; wiki, pebble
-;                 [pebble "2.5.1"]          ; pebble jar
-;                 [commons-logging "1.0.4"] ; pebble jar
-;                 [lucene "1.4.1"]          ; pebble jar
-;                 [acegi-security "1.0.6"]  ; pebble jar
-;                 [radeox "1.0-b2" ]        ; pebble jar
+                 [pebble "2.5.3"]          ; pebble 
+                 [acegi-security "1.0.6"]  ; pebble 
+                 [radeox "1.0-b2" ]        ; pebble 
                  ]
   :dev-dependencies [[ring/ring-jetty-adapter "0.3.5"]
                      [ring/ring-devel "0.3.5"]
