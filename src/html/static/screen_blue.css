@@ -287,3 +287,10 @@ li {
 .vBottom {
   vertical-align: bottom;
 }
+
+/* -- remove underlines on images -- */
+a img {
+border-style: none;
+display: block;
+margin: 0 auto;
+}

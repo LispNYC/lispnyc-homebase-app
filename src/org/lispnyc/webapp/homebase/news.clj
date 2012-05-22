@@ -15,7 +15,7 @@
 
 (def positive-keywords ["turing"
                         "hickey"
-                        "alankay"
+                        "alan kay"
                         "mccarthy"
                         "minksy"
                         "stallman"
@@ -62,7 +62,9 @@
                         "meta program"
                         "self-modify"
                         "self modify"
-                        " ai " ])
+                        " ai "
+                        " alu "
+                        ])
 
 (def negative-keywords ["pronounce"
                         "pronouncing"

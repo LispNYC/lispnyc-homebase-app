@@ -17,7 +17,8 @@
             [swank.swank])
   (:import  [java.io]
             [java.util]
-            [com.ecyrd.jspwiki])
+            [com.ecyrd.jspwiki]
+            [extract.PNGExtractText])
   (:gen-class)) ; required for main
 
 (def homebase-data-dir "homebase-data/")
@@ -25,24 +26,37 @@
 (def rsvp-file (str homebase-data-dir "rsvp-meeting.txt"))
 
 (defn make-saying []
-  (let [sayings ["LispNYC: Providing parenthesis to New York since 2002"
-                 "\"A language that doesn't affect the way you think about programming, is not worth knowing.\" - Alan Perlis"
-                 "\"Like DNA, such a language [Lisp] does not go out of style.\" - Paul Graham, ANSI Common Lisp"
-                 "\"Only the creatively intelligent can prosper in the Lisp world.\" - Richard Gabriel"
-                 "\"The greatest single programming language ever designed.\" - Alan Kay (about Lisp)"
-                 "\"Lisp is a programmable programming language.\" - John Foderaro"
-                 "\"Will write code that writes code that writes code that writes code for money.\" - on comp.lang.lisp"
-                 "\"Lisp is a language for doing what you've been told is impossible.\" - Kent Pitman"
-                 ]]
-    (nth sayings (rand (count sayings))) ))
+  (rand-nth ["LispNYC: Providing parenthesis to New York since 2002"
+             "\"A language that doesn't affect the way you think about programming, is not worth knowing.\" - Alan Perlis"
+             "\"Like DNA, such a language [Lisp] does not go out of style.\" - Paul Graham, ANSI Common Lisp"
+             "\"Only the creatively intelligent can prosper in the Lisp world.\" - Richard Gabriel"
+             "\"The greatest single programming language ever designed.\" - Alan Kay (about Lisp)"
+             "\"Lisp is a programmable programming language.\" - John Foderaro"
+             "\"Will write code that writes code that writes code that writes code for money.\" - on comp.lang.lisp"
+             "\"Lisp is a language for doing what you've been told is impossible.\" - Kent Pitman"
+             ]))
+
+(defn make-ad
+  "Randomly select a PNG file from the ad directory, comment is url"
+  []
+  (let [adpath "/static/images/ads/"
+        file   (rand-nth
+                (filter #(.endsWith (.getName %) ".png")
+                        (file-seq (clojure.java.io/file (str "./html" adpath)))))
+        path   (str adpath (.getName file)) 
+        url    (extract.PNGExtractText/getComment
+                (new java.io.FileInputStream file))]
+    {:path path
+     :url  url
+     } ))
 
 ;;
 ;; templates
 ;;
 
 (defn template-index "Associate the announcemet, meeting and recent blog entry with the html."
-   [announcement meeting blog]
-  (enlive/template
+  ([announcement meeting blog] (template-index announcement meeting blog (make-ad)))
+  ([announcement meeting blog ad] (enlive/template
    "html/template-index.html" [] ;; src and args
    ;; metadata is tricky
    [(and (enlive/has [:meta]) (enlive/attr-has :name "description"))] (enlive/set-attr :content (:title meeting))
@@ -64,9 +78,14 @@
    [:span.blogHeader] (enlive/html-content (str "latest blog - <i>" (:title blog) "</i> by " (:author blog)))
    [:p.blogContent]   (enlive/html-content (str (:content blog) "<p><a href=\"/blog/\">more articles by LispNYC members</a></p>"))
 
+   ;; ad
+   [:a#ad]   (enlive/set-attr :href (:url  ad))
+   [:img#ad] (enlive/set-attr :src  (:path ad)) 
+   
    ;; witty saying
    [:div#footerLeft]     (enlive/html-content (str "&nbsp;&nbsp;" (make-saying)))   
    ))
+)
 
 (defn template-wiki "do the same with the wiki data"
   [wiki-article]
