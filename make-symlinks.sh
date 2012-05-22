@@ -26,6 +26,8 @@ echo "forcing some build deps not in the maven or clojar repos..."
 
 # from jetty
 mvn install:install-file -DgroupId=javax.mail.glassfish -DartifactId=javax.mail.glassfish -Dversion=1.4.1.v201005082020 -Dpackaging=jar -Dfile=../lispnyc-appserver/lib/jndi/javax.mail.glassfish_1.4.1.v201005082020.jar
+mvn install:install-file -DgroupId=org.mortbay.jetty    -DartifactId=servlet-api-2.5      -Dversion=2.5.0.v200910301333 -Dpackaging=jar -Dfile=../lispnyc-appserver/lib/servlet-api-2.5.jar
+mvn install:install-file -DgroupId=javax.servlet.jsp    -DartifactId=javax.servlet.jsp    -Dversion=2.1.0.v201004190952 -Dpackaging=jar -Dfile=../lispnyc-appserver/lib/jsp/javax.servlet.jsp_2.1.0.v201004190952.jar
 
 # from pebble jar
 mkdir tmp
