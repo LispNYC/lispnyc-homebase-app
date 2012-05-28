@@ -54,14 +54,17 @@
 ;; templates
 ;;
 
-(defn template-index "Associate the announcemet, meeting and recent blog entry with the html."
-  ([announcement meeting blog] (template-index announcement meeting blog (make-ad)))
-  ([announcement meeting blog ad] (enlive/template
+(defn template-index "Associate the announcemet, meeting and news entry with the html."
+  ([announcement meeting news] (template-index announcement meeting news (make-ad)))
+  ([announcement meeting news ad] (enlive/template
    "html/template-index.html" [] ;; src and args
    ;; metadata is tricky
    [(and (enlive/has [:meta]) (enlive/attr-has :name "description"))] (enlive/set-attr :content (:title meeting))
    [(and (enlive/has [:meta]) (enlive/attr-has :name "keywords"))]    (enlive/set-attr :content (:title meeting)) 
-   [(and (enlive/has [:meta]) (enlive/attr-has :name "author"))]      (enlive/set-attr :content "Heow Goodman") 
+   [(and (enlive/has [:meta]) (enlive/attr-has :name "author"))]      (enlive/set-attr :content "Heow Goodman")
+
+   ;; make home active
+   [:div#header [:a (enlive/nth-of-type 4)]] (enlive/set-attr :class "active")
 
    ;; announcement
    [:span.announcementHeader] (enlive/html-content (:title announcement))
@@ -74,9 +77,9 @@
                                                    (if (.contains (:venue meeting) "Google")
                                                      "<br><br>You <a href=\"/meeting/rsvp\">must RSVP here</a> or at <a target=\"_blank\" href=\"http://www.meetup.com/LispNYC/\">Meetup</a>" "")
                                                    "</p>"))
-   ;; blog entry
-   [:span.blogHeader] (enlive/html-content (str "latest blog - <i>" (:title blog) "</i> by " (:author blog)))
-   [:p.blogContent]   (enlive/html-content (str (:content blog) "<p><a href=\"/blog/\">more articles by LispNYC members</a></p>"))
+   ;; news entry
+   [:span.blogHeader] (enlive/html-content "lisp news")
+   [:p.blogContent]   (enlive/html-content (str (htmlify-news news 1 false) "<p><a href=\"/news\">more news</a></p>"))
 
    ;; ad
    [:a#ad]   (enlive/set-attr :href (:url  ad))
@@ -88,15 +91,30 @@
 )
 
 (defn template-wiki "do the same with the wiki data"
-  [wiki-article]
-  (enlive/template "html/template-home.html" []
-   [:title]              (enlive/content (str "New York City Lisp User Group: " (:title wiki-article)))
-   [:content]            (enlive/html-content (:content wiki-article))
-   [:span.meetingHeader] (enlive/content (:title wiki-article))
-   [:p.meetingContent]   (enlive/html-content (:content wiki-article))
-   
-   [:div#footerLeft]     (enlive/html-content (str "&nbsp;&nbsp;" (make-saying)))
-   ))
+  ([wiki-article] (template-wiki wiki-article 4 (make-ad)))
+  ([wiki-article active-header-index] (template-wiki wiki-article active-header-index (make-ad)))
+  ([wiki-article active-header-index ad]
+     (enlive/template
+      "html/template-index.html" []
+      [:title]              (enlive/content (str "New York City Lisp User Group: " (:title wiki-article)))
+
+      ;; header nav
+      [:div#header [:a (enlive/nth-of-type active-header-index) ]] (enlive/set-attr :class (if (= 1 active-header-index) "activeLastMenuItem" "active") )
+
+      ;; wipe out announcement and news
+      [:div#announcement] (enlive/content "")
+      [:div#news] (enlive/content "")
+                      
+      [:content]            (enlive/html-content (:content wiki-article))
+      [:span.meetingHeader] (enlive/content (:title wiki-article))
+      [:p.meetingContent]   (enlive/html-content (:content wiki-article))
+
+      ;; ad
+      [:a#ad]   (enlive/set-attr :href (:url  ad))
+      [:img#ad] (enlive/set-attr :src  (:path ad)) 
+      
+      [:div#footerLeft]     (enlive/html-content (str "&nbsp;&nbsp;" (make-saying)))
+      )))
 
 ;;
 ;; pages
@@ -124,26 +142,28 @@
 
 (defn news-pager [visit]
   (html/html
-   (if (> visit 1) [:a {:href (str "/news?p=" (max 1 (- visit 1)))} "&lt; better "])
-   (map #(vec (if (= visit %) (list :bold (str " " visit " "))
-                  (list :a {:href (str "/news?p=" %)} (str " " % " ")) ))
+   (if (> visit 1) [:a {:class "pager-better" :href (str "/news?p=" (max 1 (- visit 1)))} "&lt; better "])
+   (map #(vec (if (= visit %) (list :span { :class "pager-current"} (str " " visit " "))
+                  (list :a {:class "pager-page" :href (str "/news?p=" %)} (str " " % " ")) ))
         (range 1 (+ 1 max-pages)))
-   (if (< visit max-pages) [:a {:href (str "/news?p=" (min max-pages (+ visit 1)))} " newer &gt;"]) ))
+   (if (< visit max-pages) [:a {:class "pager-newer" :href (str "/news?p=" (min max-pages (+ visit 1)))} " newer &gt;"]) ))
 
-(defn htmlify-news [items page]
-  (html/html
-     [:table (map #(html/html
-                    [:tr
-                     [:td [:img {:src (str "/static/images/icon-"
+(defn htmlify-news
+  ([items]      (htmlify-news items 0    true))
+  ([items page] (htmlify-news items page true))
+  ([items page pager?]
+     (html/html
+      [:table {:id "news" }(map #(html/html
+                     [:tr
+                      [:td [:img {:src (str "/static/images/icon-"
                                             (apply str (rest (str (:type %))))
                                             "-32.png")}] ]
-                     ;; link the title if there are no embedded links
-                     [:td (if (.contains (get-title %) "href")
-                            (get-title %)
-                            [:a {:href (:link %) :target "_blank"} (get-title %)])]]) items)]
-     [:hr]
-     [:p (news-pager page)]
-     ))
+                      ;; link the title if there are no embedded links
+                      [:td (if (.contains (get-title %) "href")
+                             (get-title %)
+                             [:a {:href (:link %) :target "_blank"} (get-title %)])]]) items)]
+      (if pager? [:p {:class "pager"} (news-pager page)])
+      )))
 
 (defn incstr [str-value]
   (try
@@ -159,7 +179,7 @@
                          (if (> page 0) page visits))
                content (take 30 (news/fetch vp))
                html    (htmlify-news content vp)]
-           ((template-wiki {:title (news-title vp) :content html})) )
+           ((template-wiki {:title (news-title vp) :content html} 3)) )
    })
   
 ;;
@@ -242,12 +262,14 @@
 ;;
 (ww/defroutes app-routes
   ;; avoid caching, no vars
-  (ww/GET  "/" []     ((template-index (wiki/fetch-wikipage "front-page") (meetup/fetch-meetup) (first (pebble/fetch-blogs)))))
-  (ww/GET  "/home" [] ((template-index (pebble/fetch-announcement) (meetup/fetch-meetup) (first (pebble/fetch-blogs)))))
+  (ww/GET  "/" []     ((template-index (wiki/fetch-wikipage "front-page") (meetup/fetch-meetup) (take 10 (news/fetch 1)))))
+  (ww/GET  "/home" [] ((template-index (wiki/fetch-wikipage "front-page") (meetup/fetch-meetup) (take 10 (news/fetch 1)))))
   
   (ww/GET          "/debug" [] (debug-page))
   (ww/GET          "/news" {params :params cookies :cookies} (news-page cookies params))
   ;; (ww/GET          "/mail"  [] (mail-page))
+  (ww/GET  "/meeting"  [] ((template-wiki (wiki/fetch-wikipage "meetings") 1)))
+  (ww/GET  "/meetings" [] ((template-wiki (wiki/fetch-wikipage "meetings") 1)))
 
   (ww/POST         "/soc/idea"      {params :params} (process-form params mail-idea idea-file))
   (ww/POST         "/blog-signup"   {params :params} (mail-blog-signup params))
