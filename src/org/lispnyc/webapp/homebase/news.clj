@@ -240,30 +240,31 @@
    :twitter-friends   (atom [])
    :twitter-clojure   (atom [])
    :twitter-lisp      (atom [])
-   :twitter-scheme    (atom [])} )
+   :twitter-scheme    (atom [])
+   } )
 
 ;; return last good values during an error
-(defmacro set-data! [form last-good]
+(defmacro set-data! [form data-recs key]
   `(try
-     (reset! (feed-data ~last-good) ~form)
-     (deref  (feed-data ~last-good))
-     (catch java.lang.Exception e# (deref (feed-data ~last-good)))))
+     (reset! (~data-recs ~key) ~form)
+     (deref  (~data-recs ~key))
+     (catch java.lang.Exception e# (deref (~data-recs ~key)))))
 
 (defn filtered-fetch []
   (remove-dupes
    (do ;; release the threads!  Note: it's faster to let the thread assoc-words
-     (.start (Thread. #(set-data! (assoc-words (assoc-weight 10     (fetch-google-groups)))   :google-groups)))
-     (.start (Thread. #(set-data! (assoc-words (assoc-weight 10     (fetch-pebble-blog)))     :pebble-blog)))
-     (.start (Thread. #(set-data! (assoc-words (filter-by-keyword   (fetch-hacker-news)))     :hacker-news)))
-     (.start (Thread. #(set-data! (assoc-words (assoc-weight 10     (fetch-planet-lisp)))     :planet-lisp)))
-     (.start (Thread. #(set-data! (assoc-words (assoc-weight 8      (fetch-reddit-lisp)))     :reddit-lisp)))
-     (.start (Thread. #(set-data! (assoc-words (assoc-weight 8      (fetch-reddit-clojure)))  :reddit-clojure)))
-     (.start (Thread. #(set-data! (assoc-words (assoc-weight 8      (fetch-reddit-scheme)))   :reddit-scheme)))
-     (.start (Thread. #(set-data! (assoc-words (assoc-weight 10     (fetch-twitter-lispnyc))) :twitter-lispnyc)))
-     (.start (Thread. #(set-data! (assoc-words (filter-by-keyword   (fetch-twitter-friends))) :twitter-friends)))
-     (.start (Thread. #(set-data! (assoc-words (filter-by-keyword   (fetch-twitter-clojure))) :twitter-clojure)))
-     (.start (Thread. #(set-data! (assoc-words (filter-by-keyword 2 (fetch-twitter-lisp)))    :twitter-lisp)))
-     (.start (Thread. #(set-data! (assoc-words (filter-by-keyword 2 (fetch-twitter-scheme)))  :twitter-scheme)))
+     (.start (Thread. #(set-data! (assoc-words (assoc-weight 10     (fetch-google-groups)))   feed-data :google-groups)))
+     (.start (Thread. #(set-data! (assoc-words (assoc-weight 10     (fetch-pebble-blog)))     feed-data :pebble-blog)))
+     (.start (Thread. #(set-data! (assoc-words (filter-by-keyword   (fetch-hacker-news)))     feed-data :hacker-news)))
+     (.start (Thread. #(set-data! (assoc-words (assoc-weight 10     (fetch-planet-lisp)))     feed-data :planet-lisp)))
+     (.start (Thread. #(set-data! (assoc-words (assoc-weight 8      (fetch-reddit-lisp)))     feed-data :reddit-lisp)))
+     (.start (Thread. #(set-data! (assoc-words (assoc-weight 8      (fetch-reddit-clojure)))  feed-data :reddit-clojure)))
+     (.start (Thread. #(set-data! (assoc-words (assoc-weight 8      (fetch-reddit-scheme)))   feed-data :reddit-scheme)))
+     (.start (Thread. #(set-data! (assoc-words (assoc-weight 10     (fetch-twitter-lispnyc))) feed-data :twitter-lispnyc)))
+     (.start (Thread. #(set-data! (assoc-words (filter-by-keyword   (fetch-twitter-friends))) feed-data :twitter-friends)))
+     (.start (Thread. #(set-data! (assoc-words (filter-by-keyword   (fetch-twitter-clojure))) feed-data :twitter-clojure)))
+     (.start (Thread. #(set-data! (assoc-words (filter-by-keyword 2 (fetch-twitter-lisp)))    feed-data :twitter-lisp)))
+     (.start (Thread. #(set-data! (assoc-words (filter-by-keyword 2 (fetch-twitter-scheme)))  feed-data :twitter-scheme)))
       
      ;; meh, send back whatever happens to be in our buckets
      (vec (flatten (map deref (vals feed-data)))) )))

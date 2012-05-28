@@ -4,6 +4,7 @@
             [org.lispnyc.webapp.homebase.feed.wiki        :as wiki]
             [org.lispnyc.webapp.homebase.feed.util        :as util] 
             [org.lispnyc.webapp.homebase.news             :as news]
+            [clojure.core.memoize                         :as memo]
             [hiccup.core                                  :as html]
             [ring.adapter.jetty                           :as jetty]
             [ring.middleware.cookies                      :as cookies]
@@ -50,10 +51,20 @@
      :url  url
      } ))
 
+(def do-fetch-meetup 
+  (memo/memo-ttl #(meetup/fetch-meetup) (news/in-min 10)))
+
+(def meetup-data {:meetup (atom [])})
+
+(defn fetch-meetup
+  "see news for async/error details"
+  []
+  (.start (Thread. #(news/set-data! (do-fetch-meetup) meetup-data :meetup)))
+  (deref (:meetup meetup-data)))
+
 ;;
 ;; templates
 ;;
-
 (defn template-index "Associate the announcemet, meeting and news entry with the html."
   ([announcement meeting news] (template-index announcement meeting news (make-ad)))
   ([announcement meeting news ad] (enlive/template
@@ -78,7 +89,7 @@
                                                      "<br><br>You <a href=\"/meeting/rsvp\">must RSVP here</a> or at <a target=\"_blank\" href=\"http://www.meetup.com/LispNYC/\">Meetup</a>" "")
                                                    "</p>"))
    ;; news entry
-   [:span.blogHeader] (enlive/html-content "lisp news")
+   [:span.blogHeader] (enlive/html-content "news")
    [:p.blogContent]   (enlive/html-content (str (htmlify-news news 1 false) "<p><a href=\"/news\">more news</a></p>"))
 
    ;; ad
@@ -128,7 +139,7 @@
     (:title item)
     (str (:user item) ": " (:title item))))
 
-(def max-pages 6)
+(def max-news-pages 6)
 
 (defn news-title [visit]
   (cond (= 1 visit) "LispNYC News"
@@ -145,8 +156,8 @@
    (if (> visit 1) [:a {:class "pager-better" :href (str "/news?p=" (max 1 (- visit 1)))} "&lt; better "])
    (map #(vec (if (= visit %) (list :span { :class "pager-current"} (str " " visit " "))
                   (list :a {:class "pager-page" :href (str "/news?p=" %)} (str " " % " ")) ))
-        (range 1 (+ 1 max-pages)))
-   (if (< visit max-pages) [:a {:class "pager-newer" :href (str "/news?p=" (min max-pages (+ visit 1)))} " newer &gt;"]) ))
+        (range 1 (+ 1 max-news-pages)))
+   (if (< visit max-news-pages) [:a {:class "pager-newer" :href (str "/news?p=" (min max-news-pages (+ visit 1)))} " newer &gt;"]) ))
 
 (defn htmlify-news
   ([items]      (htmlify-news items 0    true))
@@ -168,12 +179,11 @@
 (defn incstr [str-value]
   (try
     (let [v (+ 1 (Integer/parseInt str-value))]
-      (if (<= v max-pages) v 1)) 
+      (if (<= v max-news-pages) v 1)) 
     (catch java.lang.NumberFormatException _ 1)))
 
 (defn news-page [cookies params]
-  {
-   :cookies { "visits" (str (incstr (:value (cookies "visits")))) }
+  {:cookies { "visits" (str (incstr (:value (cookies "visits")))) }
    :body (let [vp      (let [visits  (incstr (:value (cookies "visits")))
                              page    (util/str->int (params "p"))]
                          (if (> page 0) page visits))
@@ -183,9 +193,8 @@
    })
   
 ;;
-;; processing
+;; form processing
 ;; 
-
 (defn validate-input "Only keep specific characters in the input string."
      [input-str]
      (let [re (re-pattern "[a-zA-Z0-9\\-\\_\\ \\.\\!\\?\\@]")]
@@ -258,12 +267,12 @@
       ((template-wiki wikipage)))))
 
 ;;
-;; jetty routes
+;; Jetty routes
 ;;
 (ww/defroutes app-routes
   ;; avoid caching, no vars
-  (ww/GET  "/" []     ((template-index (wiki/fetch-wikipage "front-page") (meetup/fetch-meetup) (take 10 (news/fetch 1)))))
-  (ww/GET  "/home" [] ((template-index (wiki/fetch-wikipage "front-page") (meetup/fetch-meetup) (take 10 (news/fetch 1)))))
+  (ww/GET  "/" []     ((template-index (wiki/fetch-wikipage "front-page") (fetch-meetup) (take 10 (news/fetch 1)))))
+  (ww/GET  "/home" [] ((template-index (wiki/fetch-wikipage "front-page") (fetch-meetup) (take 10 (news/fetch 1)))))
   
   (ww/GET          "/debug" [] (debug-page))
   (ww/GET          "/news" {params :params cookies :cookies} (news-page cookies params))
