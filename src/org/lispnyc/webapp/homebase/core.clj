@@ -13,8 +13,6 @@
             [compojure.route                              :as route]
             [net.cgrand.enlive-html                       :as enlive]
             [clojure.contrib.shell-out                    :as shell]
-            [clj-time.core                                :as tc]
-            [clj-time.format                              :as tf]
             [swank.swank])
   (:import  [java.io]
             [java.util]
@@ -61,6 +59,53 @@
   []
   (.start (Thread. #(news/set-data! (do-fetch-meetup) meetup-data :meetup)))
   (deref (:meetup meetup-data)))
+
+(defn make-news-title [item]
+  (if (empty? (:user item)) ; add user to title if there is one
+    (:title item)
+    (str (:user item) ": " (:title item))))
+
+(def max-news-pages 6)
+
+(defn news-title [visit]
+  (cond (= 1 visit) "LispNYC News"
+        (= 2 visit) "Lisp News: with more planetary sources"
+        (= 3 visit) "Lisp News: weighed mostly by merrit"
+        (= 4 visit) "Lisp News: all news by relative merrit"
+        (= 5 visit) "Lisp News: weighed less by merrit, more by date"
+        (= 6 visit) "Lisp News: most up to date news"
+        :else "All the news that fits, we print."
+        ))
+
+(defn news-pager [visit]
+  (html/html
+   (if (> visit 1) [:a {:class "pager-better" :href (str "/news?p=" (max 1 (- visit 1)))} "&lt; better "])
+   (map #(vec (if (= visit %) (list :span { :class "pager-current"} (str " " visit " "))
+                  (list :a {:class "pager-page" :href (str "/news?p=" %)} (str " " % " ")) ))
+        (range 1 (+ 1 max-news-pages)))
+   (if (< visit max-news-pages) [:a {:class "pager-newer" :href (str "/news?p=" (min max-news-pages (+ visit 1)))} " newer &gt;"]) ))
+
+(defn htmlify-news
+  ([items]      (htmlify-news items 0    true))
+  ([items page] (htmlify-news items page true))
+  ([items page pager?]
+     (html/html
+      [:table {:id "news" }(map #(html/html
+                     [:tr
+                      [:td [:img {:src (str "/static/images/icon-"
+                                            (apply str (rest (str (:type %))))
+                                            "-32.png")}] ]
+                      ;; link the title if there are no embedded links
+                      [:td (if (.contains (make-news-title %) "href")
+                             (make-news-title %)
+                             [:a {:href (:link %) :target "_blank"} (make-news-title %)])]]) items)]
+      (if pager? [:p {:class "pager"} (news-pager page)]) )))
+
+(defn incstr [str-value]
+  (try
+    (let [v (+ 1 (Integer/parseInt str-value))]
+      (if (<= v max-news-pages) v 1)) 
+    (catch java.lang.NumberFormatException _ 1)))
 
 ;;
 ;; templates
@@ -134,54 +179,6 @@
   (future (swank.swank/start-repl))
   "Debugging started on localhost, swank on in to :4005 kind sir.")
 
-(defn get-title [item]
-  (if (empty? (:user item)) ; add user to title if there is one
-    (:title item)
-    (str (:user item) ": " (:title item))))
-
-(def max-news-pages 6)
-
-(defn news-title [visit]
-  (cond (= 1 visit) "LispNYC News"
-        (= 2 visit) "Lisp News: with more planetary sources"
-        (= 3 visit) "Lisp News: weighed mostly by merrit"
-        (= 4 visit) "Lisp News: all news by relative merrit"
-        (= 5 visit) "Lisp News: weighed less by merrit, more by date"
-        (= 6 visit) "Lisp News: most up to date news"
-        :else "All the news that fits, we print."
-        ))
-
-(defn news-pager [visit]
-  (html/html
-   (if (> visit 1) [:a {:class "pager-better" :href (str "/news?p=" (max 1 (- visit 1)))} "&lt; better "])
-   (map #(vec (if (= visit %) (list :span { :class "pager-current"} (str " " visit " "))
-                  (list :a {:class "pager-page" :href (str "/news?p=" %)} (str " " % " ")) ))
-        (range 1 (+ 1 max-news-pages)))
-   (if (< visit max-news-pages) [:a {:class "pager-newer" :href (str "/news?p=" (min max-news-pages (+ visit 1)))} " newer &gt;"]) ))
-
-(defn htmlify-news
-  ([items]      (htmlify-news items 0    true))
-  ([items page] (htmlify-news items page true))
-  ([items page pager?]
-     (html/html
-      [:table {:id "news" }(map #(html/html
-                     [:tr
-                      [:td [:img {:src (str "/static/images/icon-"
-                                            (apply str (rest (str (:type %))))
-                                            "-32.png")}] ]
-                      ;; link the title if there are no embedded links
-                      [:td (if (.contains (get-title %) "href")
-                             (get-title %)
-                             [:a {:href (:link %) :target "_blank"} (get-title %)])]]) items)]
-      (if pager? [:p {:class "pager"} (news-pager page)])
-      )))
-
-(defn incstr [str-value]
-  (try
-    (let [v (+ 1 (Integer/parseInt str-value))]
-      (if (<= v max-news-pages) v 1)) 
-    (catch java.lang.NumberFormatException _ 1)))
-
 (defn news-page [cookies params]
   {:cookies { "visits" (str (incstr (:value (cookies "visits")))) }
    :body (let [vp      (let [visits  (incstr (:value (cookies "visits")))
@@ -207,31 +204,22 @@
          (interpose "\n"
               (map #(str (first %1) ": " (validate-input (second %1))) params))))
 
-(defn mail-rsvp [params] ;; TODO: merge
-  (let [msg (map->mailstr params)
-        cmd (str "/bin/echo '" msg "' | /usr/bin/mail request@lispnyc.org -s '" (validate-input (params "subject")) "'")]
-    (shell/sh "/bin/sh" "-c" cmd)
-    "<html><meta http-equiv=\"REFRESH\" content=\"0;url=/meeting/rsvp-thanks\"></HEAD></html>" ))
-
-(defn mail-contact [params] ;; TODO: merge
+(defn mail-generic [params thanks-target]
   (if (empty? (params "jobtitle")) ; linkbait
     (let [msg (map->mailstr params)
-          cmd (str "/bin/echo '" msg "' | /usr/bin/mail request@lispnyc.org -s '" (validate-input (params "subject")) "'")]
+          cmd (str "/bin/echo '" msg "' | /usr/bin/mail heow@localhost -s '" (validate-input (params "subject")) "'")]
       (shell/sh "/bin/sh" "-c" cmd)
-      "<html><meta http-equiv=\"REFRESH\" content=\"0;url=/contact-thanks\"></HEAD></html>" )))
+      (str "<html><meta http-equiv=\"REFRESH\" content=\"0;url=/" thanks-target "\"></HEAD></html>") )))
 
-(defn mail-blog-signup [params] ;; TODO: merge
-  (if (empty? (params "jobtitle")) ; linkbait
-    (let [msg (map->mailstr params)
-          cmd (str "/bin/echo '" msg "' | /usr/bin/mail request@lispnyc.org -s 'blog request " (tf/unparse (tf/formatters :basic-date) (tc/now)) "'" )]
-      (shell/sh "/bin/sh" "-c" cmd)
-      "<html><meta http-equiv=\"REFRESH\" content=\"0;url=/blog-thanks\"></HEAD></html>" )))
+(defn mail-rsvp [params]
+  (mail-generic params "rsvp-thanks"))
 
-(defn mail-idea [params] ;; TODO: merge
-  (let [msg (map->mailstr params)
-        cmd (str "/bin/echo '" msg "' | /usr/bin/mail management@lispnyc.org -s 'soc 2011 idea'")]
-    (shell/sh "/bin/sh" "-c" cmd)
-    "<html><meta http-equiv=\"REFRESH\" content=\"0;url=/soc/thanks\"></HEAD></html>" ))
+(defn mail-contact [params]
+  (mail-generic params "contact-thanks"))
+
+(defn mail-blog [params]
+  (mail-generic params "blog-thanks"))
+
 
 (comment
   ;; TODO: use Java or pebble mail, /usr/bin/mail isn't a valid long-term API
@@ -247,15 +235,6 @@
       (. net.sourceforge.pebble.util.MailUtils sendMail session blog ["heow@localhost"] "webapp mail test" "foo")
       "mail sent")))
 
-(defn persist-form! [form data-file]
-  (dosync
-   (with-open [f (java.io.FileWriter. data-file true)]
-     (.write f (prn-str form)))))
-
-(defn process-form [form mail-fn data-file]
-  (persist-form! form data-file)
-  (mail-fn form))
-
 (defn process-wiki-or-404
   "determine and dispatch on wiki topic, or it's a 404"
   [request]
@@ -270,21 +249,15 @@
 ;; Jetty routes
 ;;
 (ww/defroutes app-routes
-  ;; avoid caching, no vars
-  (ww/GET  "/" []     ((template-index (wiki/fetch-wikipage "front-page") (fetch-meetup) (take 10 (news/fetch 1)))))
-  (ww/GET  "/home" [] ((template-index (wiki/fetch-wikipage "front-page") (fetch-meetup) (take 10 (news/fetch 1)))))
+  (ww/GET "/"          [] ((template-index (wiki/fetch-wikipage "front-page") (fetch-meetup) (take 10 (news/fetch 1)))))
+  (ww/GET "/home"      [] ((template-index (wiki/fetch-wikipage "front-page") (fetch-meetup) (take 10 (news/fetch 1)))))
+  (ww/GET "/debug"     [] (debug-page))
+  (ww/GET "/meeting"   [] ((template-wiki (wiki/fetch-wikipage "meetings") 1)))
+  (ww/GET "/news"      {params :params cookies :cookies} (news-page cookies params))
   
-  (ww/GET          "/debug" [] (debug-page))
-  (ww/GET          "/news" {params :params cookies :cookies} (news-page cookies params))
-  ;; (ww/GET          "/mail"  [] (mail-page))
-  (ww/GET  "/meeting"  [] ((template-wiki (wiki/fetch-wikipage "meetings") 1)))
-  (ww/GET  "/meetings" [] ((template-wiki (wiki/fetch-wikipage "meetings") 1)))
-
-  (ww/POST         "/soc/idea"      {params :params} (process-form params mail-idea idea-file))
-  (ww/POST         "/blog-signup"   {params :params} (mail-blog-signup params))
-  (ww/POST         "/meeting/rsvp"  {params :params} (process-form params mail-rsvp rsvp-file))
-  (ww/POST         "/meetings/rsvp" {params :params} (process-form params mail-rsvp rsvp-file))
-  (ww/POST         "/contact"       {params :params} (mail-contact params))
+  (ww/POST "/blog"     {params :params} (mail-blog    params))
+  (ww/POST "/rsvp"     {params :params} (mail-rsvp    params))
+  (ww/POST "/contact"  {params :params} (mail-contact params))
   
   (route/files     "/" {:root "html/"})  ; not used during WAR deployment
 
