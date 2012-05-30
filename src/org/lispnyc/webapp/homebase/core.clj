@@ -254,6 +254,7 @@
   (ww/GET "/debug"     [] (debug-page))
   (ww/GET "/meeting"   [] ((template-wiki (wiki/fetch-wikipage "meetings") 1)))
   (ww/GET "/news"      {params :params cookies :cookies} (news-page cookies params))
+  (ww/GET "/robots.txt" [] "User-agent: *\r\nDisallow: /wiki/\r\nAllow: /" )
   
   (ww/POST "/blog"     {params :params} (mail-blog    params))
   (ww/POST "/rsvp"     {params :params} (mail-rsvp    params))
