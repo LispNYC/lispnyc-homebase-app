@@ -4,6 +4,9 @@
             [org.lispnyc.webapp.homebase.feed.wiki        :as wiki]
             [org.lispnyc.webapp.homebase.feed.util        :as util] 
             [org.lispnyc.webapp.homebase.news             :as news]
+            [clj-time.core                                :as time]
+            [clj-time.format                              :as tformat]
+            [clj-time.local                               :as tlocal]
             [clojure.core.memoize                         :as memo]
             [hiccup.core                                  :as html]
             [ring.adapter.jetty                           :as jetty]
@@ -128,11 +131,11 @@
 
    ;; meeting
    [:title]              (enlive/content (str "New York City Lisp User Group: " (:title meeting)))
-   [:span.meetingHeader] (enlive/html-content (str "meeting - " (:time meeting) " - <i>" (:title meeting) "</i>"))
+   [:span.meetingHeader] (enlive/html-content (str "meeting - " (tformat/unparse (.withZone (tformat/formatter "EEEE, MMMM d, h:mm a") (time/time-zone-for-id "America/New_York")) (:time meeting)) " - <i>" (:title meeting) "</i>"))
    [:p.meetingContent]   (enlive/html-content (str (:description meeting) "<p>Location:<br>"(:venue meeting) "<br>" (:address meeting) "<br>" (:address2 meeting)
                                                    (if (.contains (:venue meeting) "Google")
                                                      "<br><br>You <a href=\"/meeting/rsvp\">must RSVP here</a> or at <a target=\"_blank\" href=\"http://www.meetup.com/LispNYC/\">Meetup</a>" "")
-                                                   "</p>"))
+                                                   "</p><p><a target=\"_blank\" href=\"" (:event-url meeting) "\">more</a></p>"))
    ;; news entry
    [:span.blogHeader] (enlive/html-content "news")
    [:p.blogContent]   (enlive/html-content (str (htmlify-news news 1 false) "<p><a href=\"/news\">more news</a></p>"))
@@ -188,7 +191,10 @@
                html    (htmlify-news content vp)]
            ((template-wiki {:title (news-title vp) :content html} 3)) )
    })
-  
+
+(defn meeting-page []
+  ((template-wiki (wiki/fetch-wikipage "meetings") 1)))
+
 ;;
 ;; form processing
 ;; 
@@ -207,7 +213,7 @@
 (defn mail-generic [params thanks-target]
   (if (empty? (params "jobtitle")) ; linkbait
     (let [msg (map->mailstr params)
-          cmd (str "/bin/echo '" msg "' | /usr/bin/mail heow@localhost -s '" (validate-input (params "subject")) "'")]
+          cmd (str "/bin/echo '" msg "' | /usr/bin/mail heow@alphageeksinc.com -s '" (validate-input (params "subject")) "'")]
       (shell/sh "/bin/sh" "-c" cmd)
       (str "<html><meta http-equiv=\"REFRESH\" content=\"0;url=/" thanks-target "\"></HEAD></html>") )))
 
@@ -252,11 +258,12 @@
   (ww/GET "/"          [] ((template-index (wiki/fetch-wikipage "front-page") (fetch-meetup) (take 10 (news/fetch 1)))))
   (ww/GET "/home"      [] ((template-index (wiki/fetch-wikipage "front-page") (fetch-meetup) (take 10 (news/fetch 1)))))
   (ww/GET "/debug"     [] (debug-page))
-  (ww/GET "/meeting"   [] ((template-wiki (wiki/fetch-wikipage "meetings") 1)))
+  (ww/GET "/meeting"   [] (meeting-page))
+  (ww/GET "/meetings"  [] (meeting-page))
   (ww/GET "/news"      {params :params cookies :cookies} (news-page cookies params))
   (ww/GET "/robots.txt" [] "User-agent: *\r\nDisallow: /wiki/\r\nAllow: /\r\n" )
   
-  (ww/POST "/blog"     {params :params} (mail-blog    params))
+  (ww/POST "/blog-signup" {params :params} (mail-blog    params))
   (ww/POST "/rsvp"     {params :params} (mail-rsvp    params))
   (ww/POST "/contact"  {params :params} (mail-contact params))
   

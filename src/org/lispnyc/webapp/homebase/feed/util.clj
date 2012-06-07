@@ -20,4 +20,9 @@
     (Integer/parseInt str)
     (catch java.lang.NumberFormatException _ 0)))
 
+(defn str->long [str]
+  (try
+    (Long/parseLong str)
+    (catch java.lang.NumberFormatException _ 0)))
+
 (defn now [] (new org.joda.time.DateTime))
