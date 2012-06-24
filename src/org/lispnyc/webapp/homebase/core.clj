@@ -1,6 +1,7 @@
 (ns org.lispnyc.webapp.homebase.core
   (:require [org.lispnyc.webapp.homebase.feed.pebble-blog :as pebble]
             [org.lispnyc.webapp.homebase.feed.meetup      :as meetup]
+            [org.lispnyc.webapp.homebase.feed.vimeo       :as vimeo]
             [org.lispnyc.webapp.homebase.feed.wiki        :as wiki]
             [org.lispnyc.webapp.homebase.feed.util        :as util] 
             [org.lispnyc.webapp.homebase.news             :as news]
@@ -52,16 +53,28 @@
      :url  url
      } ))
 
-(def do-fetch-meetup 
-  (memo/memo-ttl #(meetup/fetch-meetup) (news/in-min 10)))
+(def core-cache
+  {:meetup       (atom [])
+   :past-meetups (atom [])
+   :videos       (atom []) })
 
-(def meetup-data {:meetup (atom [])})
+(def do-fetch-meetup       (memo/memo-ttl #(meetup/fetch-meetup) (news/in-min 10)))
+(def do-fetch-past-meetups (memo/memo-ttl #(meetup/fetch-past-meetups) (news/in-min 10)))
+(def do-fetch-videos       (memo/memo-ttl #(vimeo/fetch-videos) (news/in-min 10)))
 
-(defn fetch-meetup
-  "see news for async/error details"
-  []
-  (.start (Thread. #(news/set-data! (do-fetch-meetup) meetup-data :meetup)))
-  (deref (:meetup meetup-data)))
+;; see news for async/error details
+;; TODO: macroify
+(defn fetch-meetup []
+  (.start (Thread. #(news/set-data! (do-fetch-meetup) core-cache :meetup)))
+  (deref (:meetup core-cache)))
+
+(defn fetch-past-meetups []
+  (.start (Thread. #(news/set-data! (do-fetch-past-meetups) core-cache :past-meetups)))
+  (deref (:past-meetups core-cache)))
+
+(defn fetch-videos []
+  (.start (Thread. #(news/set-data! (do-fetch-videos) core-cache :videos)))
+  (deref (:videos core-cache)))
 
 (defn make-news-title [item]
   (if (empty? (:user item)) ; add user to title if there is one
@@ -175,6 +188,53 @@
       [:div#footerLeft]     (enlive/html-content (str "&nbsp;&nbsp;" (make-saying)))
       )))
 
+(defn only-date [dt]
+  (time/date-time (time/year dt) (time/month dt) (time/day dt)))
+
+(defn assoc-meeting-with-video [meeting videos]
+  (assoc meeting :video (first (filter #(= (only-date (:time meeting))
+                                           (only-date (:date %))) videos))))
+
+(defn unparse-meeting-date [mdate]
+  (tformat/unparse (.withZone (tformat/formatter "MMM d, YYYY")
+                              (time/time-zone-for-id "America/New_York"))
+                   mdate))
+
+(defn template-meetings []
+  (let [active-header-index 1
+        ad                  (make-ad)]
+    (enlive/template
+     "html/template-index.html" []
+     [:title]              (enlive/content (str "New York City Lisp User Group: Past Meetings" ))
+     
+     ;; header nav
+     [:div#header [:a (enlive/nth-of-type active-header-index) ]] (enlive/set-attr :class (if (= 1 active-header-index) "activeLastMenuItem" "active") )
+
+     ;; wipe out announcement and news
+     [:div#announcement] (enlive/content "")
+     [:div#news] (enlive/content "")
+                      
+     [:span.meetingHeader] (enlive/content "past-meetings")
+     [:p.meetingContent]   (enlive/html-content      (let [meetings-with-videos
+           (reverse (sort-by :time (map #(assoc-meeting-with-video % (fetch-videos)) (fetch-past-meetups))))]
+       (html/html
+        [:table {:id "meeting" }
+         (map #(html/html [:tr 
+                           [:td {:class "meeting-date" :valign "top"} (unparse-meeting-date (:time %))]
+                           [:td {:class "meeting-title" :valign "top"} [:a {:href (:event-url %) :target "_blank"} (:title %)]]
+                           [:td {:class "meeting-video"} (if (not (nil? (:video %)))
+                                  (list
+                                   [:a {:href (:video-url (:video %)) :target "_blank"}  [:img {:src (:thumbnail-url (:video %))}] "(video)" ] ) 
+                                  )]])
+              meetings-with-videos)])))
+
+     ;; ad
+     [:a#ad]   (enlive/set-attr :href (:url  ad))
+     [:img#ad] (enlive/set-attr :src  (:path ad))
+      
+     [:div#footerLeft]     (enlive/html-content (str "&nbsp;&nbsp;" (make-saying)))
+     )))
+
 ;;
 ;; pages
 ;;
@@ -193,7 +253,7 @@
    })
 
 (defn meeting-page []
-  ((template-wiki (wiki/fetch-wikipage "meetings") 1)))
+  ((template-meetings)))
 
 ;;
 ;; form processing

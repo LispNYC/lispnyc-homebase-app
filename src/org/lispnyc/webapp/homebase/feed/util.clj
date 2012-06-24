@@ -3,6 +3,12 @@
             [clj-time.format        :as time])
   (:import  [java.io.File]))
 
+(defn fetch-url-raw [url]
+  (with-open [stream (.openStream (java.net.URL. url))]
+    (let  [buf (java.io.BufferedReader. 
+                (java.io.InputStreamReader. stream))]
+      (apply str (line-seq buf)))))
+
 (defn fetch-url [url]
   (enlive/html-resource (java.net.URL. url)))
 

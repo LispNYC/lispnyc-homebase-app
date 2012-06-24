@@ -11,11 +11,12 @@
                  [ring/ring-servlet "0.3.5"]
                  [hiccup "0.3.1"]
                  [swank-clojure "1.3.0-SNAPSHOT"]
-                 [com.leadtune/clj-time "0.4.0-SNAPSHOT"]
+                 [clj-time "0.4.2"]
                  [clojure-twitter "1.2.6-SNAPSHOT"] 
                  [com.ecyrd/jspwiki "2.8.4"]
                  [org.clojure/core.memoize "0.5.1"]
                  [png-extract "1.0.3"]
+                 [org.clojars.toxi/clj-json "0.5.0"]
                  [org.clojars.gfodor/commons-lang "2.5"] ; wiki 
                  [org.clojars.aaroniba/log4j "1.2.16"]   ; wiki 
                  [javax.servlet.jsp "2.1.0.v201004190952"] ; wiki
