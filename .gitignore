@@ -1,4 +1,10 @@
+.lein-deps-sum
 lib
 *.log
+homebase-static
+pebbleblog-articles
+html
+etc
+src/html/
 src/html/static/
-homebase-static/
+classes/

@@ -21,12 +21,9 @@
   (:import  [java.io]
             [java.util]
             [com.ecyrd.jspwiki]
+            [org.jsoup Jsoup]
             [extract.PNGExtractText])
   (:gen-class)) ; required for main
-
-(def homebase-data-dir "homebase-data/")
-(def idea-file (str homebase-data-dir "soc-2011.ideas.txt"))
-(def rsvp-file (str homebase-data-dir "rsvp-meeting.txt"))
 
 (defn make-saying []
   (rand-nth ["LispNYC: Providing parenthesis to New York since 2002"
@@ -99,7 +96,9 @@
    (map #(vec (if (= visit %) (list :span { :class "pager-current"} (str " " visit " "))
                   (list :a {:class "pager-page" :href (str "/news?p=" %)} (str " " % " ")) ))
         (range 1 (+ 1 max-news-pages)))
-   (if (< visit max-news-pages) [:a {:class "pager-newer" :href (str "/news?p=" (min max-news-pages (+ visit 1)))} " newer &gt;"]) ))
+    (if (< visit max-news-pages) [:a {:class "pager-newer" :href (str "/news?p=" (min max-news-pages (+ visit 1)))} " newer &gt;"])
+    [:p [:a {:href "/news.xml"}
+         [:img {:src "/static/images/rss.png"}]]] ))
 
 (defn htmlify-news
   ([items]      (htmlify-news items 0    true))
@@ -116,6 +115,26 @@
                              (make-news-title %)
                              [:a {:href (:link %) :target "_blank"} (make-news-title %)])]]) items)]
       (if pager? [:p {:class "pager"} (news-pager page)]) )))
+
+(defn html2text [html] (.text (Jsoup/parse html)))
+
+(defn rssify-news [items page]
+  (let [title "Lisp News: Common Lisp, Clojure and Scheme news from around the world."
+        desc  "All the news that fits, we print."]
+      (html/html
+       [:rss {:version "2.0"}
+        [:channel
+         [:title title] [:description desc]
+         [:link "http://lispnyc.org/news"]
+         [:image
+          [:url "http://lispnyc.org/static/images/lispnyc-logo.gif"]
+          [:link "http://lispnyc.org/news"]
+          [:title title] [:description desc]]
+         (map #(html/html
+                [:item
+                 [:title (@#'net.cgrand.enlive-html/xml-str (html2text(:title %)))] ; strip crap out
+                 [:link  (:link %)]
+                 ]) items)]])))
 
 (defn incstr [str-value]
   (try
@@ -147,7 +166,7 @@
    [:span.meetingHeader] (enlive/html-content (str "meeting - " (tformat/unparse (.withZone (tformat/formatter "EEEE, MMMM d, h:mm a") (time/time-zone-for-id "America/New_York")) (:time meeting)) " - <i>" (:title meeting) "</i>"))
    [:p.meetingContent]   (enlive/html-content (str (:description meeting) "<p>Location:<br>"(:venue meeting) "<br>" (:address meeting) "<br>" (:address2 meeting)
                                                    (if (.contains (:venue meeting) "Google")
-                                                     "<br><br>You <a href=\"/meeting/rsvp\">must RSVP here</a> or at <a target=\"_blank\" href=\"http://www.meetup.com/LispNYC/\">Meetup</a>" "")
+                                                     "<br><br>You <a href=\"/rsvp\">must RSVP here</a> or at <a target=\"_blank\" href=\"http://www.meetup.com/LispNYC/\">Meetup</a>" "")
                                                    "</p><p><a target=\"_blank\" href=\"" (:event-url meeting) "\">more</a></p>"))
    ;; news entry
    [:span.blogHeader] (enlive/html-content "news")
@@ -252,6 +271,11 @@
            ((template-wiki {:title (news-title vp) :content html} 3)) )
    })
 
+(defn news-page-rss [params]
+  (let [page-in (util/str->int (params "p"))
+        page (if (= 0 page-in) 4 page-in)]
+    (rssify-news (take 120 (news/fetch page)) page)))
+
 (defn meeting-page []
   ((template-meetings)))
 
@@ -273,7 +297,7 @@
 (defn mail-generic [params thanks-target]
   (if (empty? (params "jobtitle")) ; linkbait
     (let [msg (map->mailstr params)
-          cmd (str "/bin/echo '" msg "' | /usr/bin/mail heow@alphageeksinc.com -s '" (validate-input (params "subject")) "'")]
+          cmd (str "/bin/echo '" msg "' | /usr/bin/mail heow@alphageeksinc.com -s '" (validate-input (params "nbf_subject")) "'")]
       (shell/sh "/bin/sh" "-c" cmd)
       (str "<html><meta http-equiv=\"REFRESH\" content=\"0;url=/" thanks-target "\"></HEAD></html>") )))
 
@@ -304,8 +328,7 @@
 (defn process-wiki-or-404
   "determine and dispatch on wiki topic, or it's a 404"
   [request]
-  (let [uri      (:uri request)
-        topic    (apply str (rest uri)) ; strip leading slash
+  (let [topic    (validate-input (apply str (rest (:uri request)))) ; scrub
         wikipage (wiki/fetch-wikipage topic)]
     (if (empty? (:content wikipage))
       "404 page not found"
@@ -321,6 +344,7 @@
   (ww/GET "/meeting"   [] (meeting-page))
   (ww/GET "/meetings"  [] (meeting-page))
   (ww/GET "/news"      {params :params cookies :cookies} (news-page cookies params))
+  (ww/GET "/news.xml"  {params :params}                  (news-page-rss params))
   (ww/GET "/robots.txt" [] "User-agent: *\r\nDisallow: /wiki/\r\nAllow: /\r\n" )
   
   (ww/POST "/blog-signup" {params :params} (mail-blog    params))

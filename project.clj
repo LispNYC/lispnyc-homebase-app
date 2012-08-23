@@ -3,6 +3,7 @@
   :run-aliases {:server [org.lispnyc.webapp.homebase.core start-server "localhost" "8080"]}   ;; 2011-01-06 currently broken with lein 1.4.2
   :main org.lispnyc.webapp.homebase.core ; required for main
   :dependencies [
+                 [org.clojars.clizzin/jsoup "1.5.1"] ; html2text
                  [org.clojure/clojure "1.3.0"]
                  [org.clojure/clojure-contrib "1.2.0"]
                  [compojure "0.5.2"]
