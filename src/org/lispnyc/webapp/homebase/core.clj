@@ -13,6 +13,7 @@
             [ring.adapter.jetty                           :as jetty]
             [ring.middleware.cookies                      :as cookies]
             [ring.middleware.params                       :as params]
+            [ring.util.response                           :as resp]
             [compojure.core                               :as ww]
             [compojure.route                              :as route]
             [net.cgrand.enlive-html                       :as enlive]
@@ -346,6 +347,7 @@
   (ww/GET "/news"      {params :params cookies :cookies} (news-page cookies params))
   (ww/GET "/news.xml"  {params :params}                  (news-page-rss params))
   (ww/GET "/robots.txt" [] "User-agent: *\r\nDisallow: /wiki/\r\nAllow: /\r\n" )
+  (ww/GET "/favicon.ico" [] (resp/redirect "/static/images/favicon.ico"))
   
   (ww/POST "/blog-signup" {params :params} (mail-blog    params))
   (ww/POST "/rsvp"     {params :params} (mail-rsvp    params))
