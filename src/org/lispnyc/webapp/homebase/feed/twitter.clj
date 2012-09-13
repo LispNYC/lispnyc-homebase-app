@@ -35,15 +35,15 @@
                                               format-twit
                                               (enlive/text (nth % 0)))
                             :title           (enlive/text (nth % 1))
-                            :weight          (str->int (enlive/text (nth % 2))) 
+                            :weight          (str->int (enlive/text (nth % 3))) 
                             :user            "LispNyc"
-                            :link            (str "https://twitter.com/#!/" (enlive/text (nth % 3)))
+                            :link            (str "https://twitter.com/" (enlive/text (nth % 2)))
                             :relevance       1)
                  ;; note: order is dependent on location in XML
                  (partition 4 (enlive/select data #{[:statuses :> :status :> :created_at]
                                                     [:statuses :> :status :> :text]
-                                                    [:statuses :> :status :> :retweet_count]
-                                                    [:statuses :> :status :> :user :> :screen_name] })))))))
+                                                    [:statuses :> :status :> :user :> :name]
+                                                    [:statuses :> :status :> :retweet_count] })))))))
 
 (def oauth-consumer
      (oauth/make-consumer "XLa0uwfmTLK57Z130QE0g"
