@@ -18,7 +18,8 @@
             [compojure.route                              :as route]
             [net.cgrand.enlive-html                       :as enlive]
             [clojure.contrib.shell-out                    :as shell]
-            [swank.swank])
+            ;[swank.swank]
+            [clojure.tools.nrepl.server                   :as nrepl])
   (:import  [java.io]
             [java.util]
             [com.ecyrd.jspwiki]
@@ -259,8 +260,9 @@
 ;; pages
 ;;
 (defn debug-page []
-  (future (swank.swank/start-repl))
-  "Debugging started on localhost, swank on in to :4005 kind sir.")
+  ;(future (swank.swank/start-repl))
+  (future (nrepl/start-server :port 4006))
+  "NREPL debugging started on localhost, jack-in to :4006 kind sir.")
 
 (defn news-page [cookies params]
   {:cookies { "visits" (str (incstr (:value (cookies "visits")))) }

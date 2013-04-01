@@ -25,14 +25,19 @@
                  [pebble "2.5.3"]          ; pebble 
                  [acegi-security "1.0.6"]  ; pebble 
                  [radeox "1.0-b2" ]        ; pebble 
+                 [org.clojure/tools.nrepl "0.2.2"] ; debug
+                 [clojure-complete "0.2.2"] ; debug, tab completion
                  ]
   :dev-dependencies [[ring/ring-jetty-adapter "0.3.5"]
                      [ring/ring-devel "0.3.5"]
                      [swank-clojure "1.3.0-SNAPSHOT"]
                      [uk.org.alienscience/leiningen-war "0.0.12"]
                      [lein-run "1.0.1-SNAPSHOT"]]
-  :aot [org.lispnyc.webapp.homebase.servlet]   ;; servlet class compiled as a java web server
-  :war {:name "home.war"} ;; resulting war name
+  ;:aot [org.lispnyc.webapp.homebase.servlet]   ;; servlet class compiled as a java web server
+  ;:war {:name "home.war"} ;; resulting war name
   :disable-implicit-clean true ;; don't nuke lib directory
+  :ring { :handler       org.lispnyc.webapp.homebase.core/app-routes
+          ; :servlet-class org.lispnyc.webapp.homebase.servlet
+         } 
   )
 
