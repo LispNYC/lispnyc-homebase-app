@@ -7,14 +7,17 @@ else
   exit 1
 fi
 
-lein uberwar
+LEIN_SNAPSHOTS_IN_RELEASE=true lein ring uberwar
 
-cp home.war ../lispnyc-appserver/webapps/
+cp target/org.lispnyc.webapp.homebase-*.war ../lispnyc-appserver/webapps/home.war
+
+# deploy by hand in webapps/home
 rm -rf ../lispnyc-appserver/webapps/home 2>/dev/null
 mkdir ../lispnyc-appserver/webapps/home
 pushd ../lispnyc-appserver/webapps/home
 jar -xf ../home.war 
 rm ../home.war
 popd 
-echo "deployed in ../lispnyc-appserver/webapps"
+
+echo "deployed in ../lispnyc-appserver/webapps/home"
 echo "make sure ../lispnyc-appserver is running"

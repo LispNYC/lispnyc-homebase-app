@@ -53,17 +53,18 @@ mkdir tmp
 pushd tmp
 jar -xvf ../../lispnyc-appserver/webapps/wiki.war WEB-INF/lib
 
-# no maven needed, just for war build
-cp WEB-INF/lib/jdom.jar                       ../lib/
-cp WEB-INF/lib/jaxen.jar                      ../lib/
-cp WEB-INF/lib/oscache.jar                    ../lib/
-cp WEB-INF/lib/oro.jar                        ../lib/
-cp WEB-INF/lib/ecs.jar                        ../lib/
-cp WEB-INF/lib/jrcs-diff.jar                  ../lib/
-cp WEB-INF/lib/lucene.jar                     ../lib/
-cp WEB-INF/lib/lucene-highlighter.jar         ../lib/
-cp WEB-INF/lib/jsonrpc-1.0.jar                ../lib/
-cp WEB-INF/lib/freshcookies-security-0.60.jar ../lib/
+# TODO: use localrepo everwhere
+# stuff into local maven
+lein localrepo install WEB-INF/lib/jdom.jar                       local/jdom 0.1
+lein localrepo install WEB-INF/lib/jaxen.jar                      local/jaxen 0.1
+lein localrepo install WEB-INF/lib/oscache.jar                    local/oscache 0.1
+lein localrepo install WEB-INF/lib/oro.jar                        local/oro 0.1
+lein localrepo install WEB-INF/lib/ecs.jar                        local/ecs 0.1
+lein localrepo install WEB-INF/lib/jrcs-diff.jar                  local/jrcs-diff 0.1
+lein localrepo install WEB-INF/lib/lucene.jar                     local/lucene 0.1
+lein localrepo install WEB-INF/lib/lucene-highlighter.jar         local/lucene-highlighter 0.1
+lein localrepo install WEB-INF/lib/jsonrpc-1.0.jar                local/jsonrpc 1.0
+lein localrepo install WEB-INF/lib/freshcookies-security-0.60.jar local/freshcookies-security 0.60
 
 popd
 rm -rf tmp
