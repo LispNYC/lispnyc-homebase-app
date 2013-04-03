@@ -1,4 +1,4 @@
-.lein-deps-sum
+.lien*
 lib
 *.log
 homebase-static

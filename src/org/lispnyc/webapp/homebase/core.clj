@@ -209,6 +209,25 @@
       [:div#footerLeft]     (enlive/html-content (str "&nbsp;&nbsp;" (make-saying)))
       )))
 
+(defn template-wiki-smallprojects "wiki on virtualhost"
+  [wiki-article]
+(enlive/template
+      "html/template-smallprojects.html" []
+      [:title]              (enlive/content (str "LispNYC: Lisp in Small Projects" (:title wiki-article)))
+
+      ;; header nav
+      ;[:div#header [:a (enlive/nth-of-type active-header-index) ]] (enlive/set-attr :class (if (= 1 active-header-index) "activeLastMenuItem" "active") )
+
+      ;; wipe out announcement and news
+      ;[:div#announcement] (enlive/content "")
+      ;[:div#news] (enlive/content "")
+
+      [:div.main_body]            (enlive/html-content (:content wiki-article))
+
+      ;[:span.meetingHeader] (enlive/content (:title wiki-article))
+      ;[:p.meetingContent]   (enlive/html-content (:content wiki-article))
+      ))
+
 (defn only-date [dt]
   (time/date-time (time/year dt) (time/month dt) (time/day dt)))
 
@@ -333,15 +352,16 @@
   [request]
   (let [topic    (validate-input (apply str (rest (:uri request)))) ; scrub
         wikipage (wiki/fetch-wikipage topic)]
-    (if (empty? (:content wikipage))
-      "404 page not found"
-      ((template-wiki wikipage)))))
+    (cond (empty? (:content wikipage))                     "404 page not found"
+          (= "lispinsmallprojects.org" (:server-name request)) ((template-wiki-smallprojects wikipage)) ; virtualhost hack
+          :else                                            ((template-wiki wikipage))))
+)
 
 ;;
 ;; Jetty routes
 ;;
 (ww/defroutes app-routes
-  (ww/GET "/"          [] ((template-index (wiki/fetch-wikipage "front-page") (fetch-meetup) (take 10 (news/fetch 1)))))
+  (ww/GET "/"          {params :params :as request} (fn [request] (cond (= "lispinsmallprojects.org" (:server-name request)) ((template-wiki-smallprojects (wiki/fetch-wikipage "welcome"))) :else ((template-index (wiki/fetch-wikipage "front-page") (fetch-meetup) (take 10 (news/fetch 1))))))) ; virtual host hack
   (ww/GET "/home"      [] ((template-index (wiki/fetch-wikipage "front-page") (fetch-meetup) (take 10 (news/fetch 1)))))
   (ww/GET "/debug"     [] (debug-page))
   (ww/GET "/meeting"   [] (meeting-page))
