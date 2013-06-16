@@ -1,4 +1,4 @@
-.lien*
+.lein*
 lib
 *.log
 homebase-static

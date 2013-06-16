@@ -211,21 +211,16 @@
 
 (defn template-wiki-smallprojects "wiki on virtualhost"
   [wiki-article]
-(enlive/template
+  (enlive/template
       "html/template-smallprojects.html" []
-      [:title]              (enlive/content (str "LispNYC: Lisp in Small Projects" (:title wiki-article)))
-
-      ;; header nav
-      ;[:div#header [:a (enlive/nth-of-type active-header-index) ]] (enlive/set-attr :class (if (= 1 active-header-index) "activeLastMenuItem" "active") )
-
-      ;; wipe out announcement and news
-      ;[:div#announcement] (enlive/content "")
-      ;[:div#news] (enlive/content "")
-
-      [:div.main_body]            (enlive/html-content (:content wiki-article))
-
-      ;[:span.meetingHeader] (enlive/content (:title wiki-article))
-      ;[:p.meetingContent]   (enlive/html-content (:content wiki-article))
+      [:title]              (enlive/content (str "Lisp in Summer Projects - " (:title wiki-article)))
+      [:div#main :div.main_top :h1] (enlive/html-content (if (= "welcome" (:title wiki-article)) "&nbsp;" (:title wiki-article)))
+      [:div#header :h1]     (enlive/html-content (if (= "welcome" (:title wiki-article)) "&nbsp;" (:title wiki-article)))
+      [:div.main_body]      (enlive/html-content (str (:content wiki-article) (if (= "welcome" (:title wiki-article)) "<p><b><a href=\"http://goo.gl/dk0LN\" target=\"_blank\">DISCUSSION GROUP</a></b></p>  <p>Also join us on <a target=\"_blank\" href=\"http://fb.lispnyc.org\" class=\"external\">Facebook</a><img alt=\"\" src=\"/wiki/images/out.png\" class=\"outlink\" />, <a target=\"_blank\" href=\"http://plus.lispnyc.org\" class=\"external\">GooglePlus</a><img alt=\"\" src=\"/wiki/images/out.png\" class=\"outlink\" />, <a target=\"_blank\" href=\"http://twitter.lispnyc.org\" class=\"external\">Twitter</a><img alt=\"\" src=\"/wiki/images/out.png\" class=\"outlink\" />, <a target=\"_blank\" href=\"http://meetup.lispnyc.org\" class=\"external\">Meetup</a><img alt=\"\" src=\"/wiki/images/out.png\" class=\"outlink\" /></p>  <p> <iframe id=\"forum_embed\" src=\"javascript:void(0)\" scrolling=\"no\" frameborder=\"0\" width=\"900\" height=\"500\"> </iframe> <script type=\"text/javascript\"> document.getElementById('forum_embed').src = 'https://groups.google.com/a/lispnyc.org/forum/embed/?place=forum/lisp-in-summer-projects-2013-discuss' + '&showsearch=true&showpopout=true&showtabs=false' + '&parenturl=' + encodeURIComponent(window.location.href); </script></p>")  ) )
+      [:div.donate]         (enlive/html-content 
+                             (cond (= "donate" (:title wiki-article)) (slurp "./webapps/home/WEB-INF/classes/html/smallprojects-donate.html") 
+                                   (= "signup" (:title wiki-article)) (slurp "./webapps/home/WEB-INF/classes/html/smallprojects-signup-form.html") 
+                                   :else "<a href=\"/donate\"><img src=\"/static/images-sp/sponsor.png\"></a>") ) ;; TODO fix me
       ))
 
 (defn only-date [dt]
@@ -306,7 +301,7 @@
 ;; 
 (defn validate-input "Only keep specific characters in the input string."
      [input-str]
-     (let [re (re-pattern "[a-zA-Z0-9\\-\\_\\ \\.\\!\\?\\@]")]
+     (let [re (re-pattern "[a-zA-Z0-9\\:\\/\\-\\_\\ \\.\\?\\!\\@]")]
        (apply str (filter #(re-matches re (str %1)) input-str))))
 
 (defn map->mailstr
@@ -316,21 +311,26 @@
          (interpose "\n"
               (map #(str (first %1) ": " (validate-input (second %1))) params))))
 
-(defn mail-generic [params thanks-target]
+(defn mail-generic [params email-target subject thanks-target]
   (if (empty? (params "jobtitle")) ; linkbait
     (let [msg (map->mailstr params)
-          cmd (str "/bin/echo '" msg "' | /usr/bin/mail heow@alphageeksinc.com -s '" (validate-input (params "nbf_subject")) "'")]
+          cmd (str "/bin/echo '" msg "' | /usr/bin/mail -s \"" subject "\" " email-target)]
       (shell/sh "/bin/sh" "-c" cmd)
       (str "<html><meta http-equiv=\"REFRESH\" content=\"0;url=/" thanks-target "\"></HEAD></html>") )))
 
 (defn mail-rsvp [params]
-  (mail-generic params "rsvp-thanks"))
+  (mail-generic params "heow@lispnyc.org" "LispNYC rsvp" "rsvp-thanks"))
 
 (defn mail-contact [params]
-  (mail-generic params "contact-thanks"))
+  (mail-generic params "heow@lispnyc.org" "LispNYC contact" "contact-thanks"))
 
 (defn mail-blog [params]
-  (mail-generic params "blog-thanks"))
+  (mail-generic params "heow@lispnyc.org" "LispNYC blog" "blog-thanks"))
+
+(defn mail-signup [params]
+  (spit "/home/cl-user/signups.txt" (str "\n" params) :append true) ;; save
+  (mail-generic params (params "nbf_email") "Lisp in Summer Projects Signup Confirmation" "") ;; confirm
+  (mail-generic params "lisp-in-summer-projects-2013-contestant-signup@lispnyc.org" "Lisp in Summer Projects Signup" "signup-thanks")) ;; post to list
 
 
 (comment
@@ -354,6 +354,7 @@
         wikipage (wiki/fetch-wikipage topic)]
     (cond (empty? (:content wikipage))                     "404 page not found"
           (= "lispinsmallprojects.org" (:server-name request)) ((template-wiki-smallprojects wikipage)) ; virtualhost hack
+          (= "lispinsummerprojects.org" (:server-name request)) ((template-wiki-smallprojects wikipage)) ; virtualhost hack
           :else                                            ((template-wiki wikipage))))
 )
 
@@ -361,7 +362,7 @@
 ;; Jetty routes
 ;;
 (ww/defroutes app-routes
-  (ww/GET "/"          {params :params :as request} (fn [request] (cond (= "lispinsmallprojects.org" (:server-name request)) ((template-wiki-smallprojects (wiki/fetch-wikipage "welcome"))) :else ((template-index (wiki/fetch-wikipage "front-page") (fetch-meetup) (take 10 (news/fetch 1))))))) ; virtual host hack
+  (ww/GET "/"          {params :params :as request} (fn [request] (cond (or (= "lispinsmallprojects.org" (:server-name request)) (= "lispinsummerprojects.org" (:server-name request))) ((template-wiki-smallprojects (wiki/fetch-wikipage "welcome"))) :else ((template-index (wiki/fetch-wikipage "front-page") (fetch-meetup) (take 10 (news/fetch 1))))))) ; virtual host hack
   (ww/GET "/home"      [] ((template-index (wiki/fetch-wikipage "front-page") (fetch-meetup) (take 10 (news/fetch 1)))))
   (ww/GET "/debug"     [] (debug-page))
   (ww/GET "/meeting"   [] (meeting-page))
@@ -374,6 +375,7 @@
   (ww/POST "/blog-signup" {params :params} (mail-blog    params))
   (ww/POST "/rsvp"     {params :params} (mail-rsvp    params))
   (ww/POST "/contact"  {params :params} (mail-contact params))
+  (ww/POST "/signup"   {params :params} (mail-signup params))
   
   (route/files     "/" {:root "html/"})  ; not used during WAR deployment
 
