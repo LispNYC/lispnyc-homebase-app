@@ -218,9 +218,11 @@
       [:div#header :h1]     (enlive/html-content (if (= "welcome" (:title wiki-article)) "&nbsp;" (:title wiki-article)))
       [:div.main_body]      (enlive/html-content (str (:content wiki-article) (if (= "welcome" (:title wiki-article)) "<p><b><a href=\"http://goo.gl/dk0LN\" target=\"_blank\">DISCUSSION GROUP</a></b></p>  <p>Also join us on <a target=\"_blank\" href=\"http://fb.lispnyc.org\" class=\"external\">Facebook</a><img alt=\"\" src=\"/wiki/images/out.png\" class=\"outlink\" />, <a target=\"_blank\" href=\"http://plus.lispnyc.org\" class=\"external\">GooglePlus</a><img alt=\"\" src=\"/wiki/images/out.png\" class=\"outlink\" />, <a target=\"_blank\" href=\"http://twitter.lispnyc.org\" class=\"external\">Twitter</a><img alt=\"\" src=\"/wiki/images/out.png\" class=\"outlink\" />, <a target=\"_blank\" href=\"http://meetup.lispnyc.org\" class=\"external\">Meetup</a><img alt=\"\" src=\"/wiki/images/out.png\" class=\"outlink\" /></p>  <p> <iframe id=\"forum_embed\" src=\"javascript:void(0)\" scrolling=\"no\" frameborder=\"0\" width=\"900\" height=\"500\"> </iframe> <script type=\"text/javascript\"> document.getElementById('forum_embed').src = 'https://groups.google.com/a/lispnyc.org/forum/embed/?place=forum/lisp-in-summer-projects-2013-discuss' + '&showsearch=true&showpopout=true&showtabs=false' + '&parenturl=' + encodeURIComponent(window.location.href); </script></p>")  ) )
       [:div.donate]         (enlive/html-content 
-                             (cond (= "donate" (:title wiki-article)) (slurp "./webapps/home/WEB-INF/classes/html/smallprojects-donate.html") 
-                                   (= "signup" (:title wiki-article)) (slurp "./webapps/home/WEB-INF/classes/html/smallprojects-signup-form.html") 
-                                   :else "<a href=\"/donate\"><img src=\"/static/images-sp/sponsor.png\"></a>") ) ;; TODO fix me
+                             (cond (= "submit-project" (clojure.string/lower-case (:title wiki-article))) (slurp "./webapps/home/WEB-INF/classes/html/smallprojects-submit.html") 
+                                   (= "submitproject"  (clojure.string/lower-case (:title wiki-article))) (slurp "./webapps/home/WEB-INF/classes/html/smallprojects-submit.html") 
+                                   (= "donate" (clojure.string/lower-case (:title wiki-article))) (slurp "./webapps/home/WEB-INF/classes/html/smallprojects-donate.html") 
+                                   (= "signup" (clojure.string/lower-case (:title wiki-article))) (slurp "./webapps/home/WEB-INF/classes/html/smallprojects-signup-form.html") 
+                                   :else "<!-- a href=\"/donate\"><img src=\"/static/images-sp/sponsor.png\"></a -->") ) ;; TODO fix me
       ))
 
 (defn only-date [dt]
@@ -322,7 +324,7 @@
   (mail-generic params "heow@lispnyc.org" "LispNYC rsvp" "rsvp-thanks"))
 
 (defn mail-contact [params]
-  (mail-generic params "heow@lispnyc.org" "LispNYC contact" "contact-thanks"))
+  (mail-generic params "lisp-in-summer-projects-2013-organizers@lispnyc.org" "LispNYC contact" "contact-thanks"))
 
 (defn mail-blog [params]
   (mail-generic params "heow@lispnyc.org" "LispNYC blog" "blog-thanks"))
@@ -331,6 +333,13 @@
   (spit "/home/cl-user/signups.txt" (str "\n" params) :append true) ;; save
   (mail-generic params (params "nbf_email") "Lisp in Summer Projects Signup Confirmation" "") ;; confirm
   (mail-generic params "lisp-in-summer-projects-2013-contestant-signup@lispnyc.org" "Lisp in Summer Projects Signup" "signup-thanks")) ;; post to list
+
+(defn mail-submit-project [params]
+  (spit "/home/cl-user/projects.txt" (str "\n" params) :append true) ;; save
+  (comment
+    (mail-generic params (params "nbf_email") "Lisp in Summer Projects Submission Confirmation" "") ;; confirm
+    (mail-generic params "lisp-in-summer-projects-2013-contestant-signup@lispnyc.org" "Lisp in Summer Projects Signup" "signup-thanks"))
+  "ok")
 
 
 (comment
@@ -376,6 +385,7 @@
   (ww/POST "/rsvp"     {params :params} (mail-rsvp    params))
   (ww/POST "/contact"  {params :params} (mail-contact params))
   (ww/POST "/signup"   {params :params} (mail-signup params))
+  (ww/POST "/submit-project" {params :params} (mail-submit-project params))
   
   (route/files     "/" {:root "html/"})  ; not used during WAR deployment
 
