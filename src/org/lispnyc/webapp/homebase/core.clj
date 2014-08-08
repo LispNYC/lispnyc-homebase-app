@@ -220,13 +220,15 @@
       [:div.donate]         (enlive/html-content 
                              (cond (= "submit-project" (clojure.string/lower-case (:title wiki-article))) (slurp "./webapps/home/WEB-INF/classes/html/smallprojects-submit.html") 
                                    (= "submitproject"  (clojure.string/lower-case (:title wiki-article))) (slurp "./webapps/home/WEB-INF/classes/html/smallprojects-submit.html") 
-                                   (= "donate" (clojure.string/lower-case (:title wiki-article))) (slurp "./webapps/home/WEB-INF/classes/html/smallprojects-donate.html") 
-                                   (= "signup" (clojure.string/lower-case (:title wiki-article))) (slurp "./webapps/home/WEB-INF/classes/html/smallprojects-signup-form.html") 
+                                   (= "judge-code"     (clojure.string/lower-case (:title wiki-article))) (slurp "./webapps/home/WEB-INF/classes/html/smallprojects-judge-code.html") 
+                                   (= "judge-lang"     (clojure.string/lower-case (:title wiki-article))) (slurp "./webapps/home/WEB-INF/classes/html/smallprojects-judge-lang.html") 
+                                   (= "donate"         (clojure.string/lower-case (:title wiki-article))) (slurp "./webapps/home/WEB-INF/classes/html/smallprojects-donate.html") 
+                                   (= "signup"         (clojure.string/lower-case (:title wiki-article))) (slurp "./webapps/home/WEB-INF/classes/html/smallprojects-signup-form.html") 
                                    :else "<!-- a href=\"/donate\"><img src=\"/static/images-sp/sponsor.png\"></a -->") ) ;; TODO fix me
       ))
 
 (defn only-date [dt]
-  (time/date-time (time/year dt) (time/month dt) (time/day dt)))
+  (time/date-time (time/year dt) (time/month dt) (time/day dt)) )
 
 (defn assoc-meeting-with-video [meeting videos]
   (assoc meeting :video (first (filter #(= (only-date (:time meeting))
@@ -364,8 +366,8 @@
     (cond (empty? (:content wikipage))                     "404 page not found"
           (= "lispinsmallprojects.org" (:server-name request)) ((template-wiki-smallprojects wikipage)) ; virtualhost hack
           (= "lispinsummerprojects.org" (:server-name request)) ((template-wiki-smallprojects wikipage)) ; virtualhost hack
-          :else                                            ((template-wiki wikipage))))
-)
+          (= "www.lispinsummerprojects.org" (:server-name request)) ((template-wiki-smallprojects wikipage)) ; virtualhost hack
+          :else                                            ((template-wiki wikipage)))) )
 
 ;;
 ;; Jetty routes
