@@ -1,4 +1,4 @@
-(defproject org.lispnyc.webapp.homebase "3.1.0"
+(defproject org.lispnyc.webapp.homebase "3.1.1"
   :description "LispNYC's webserver and social integration homebase."
   :url         "https://github.com/LispNYC/lispnyc-homebase-app"
   ; :run-aliases {:server [org.lispnyc.webapp.homebase.core start-server "localhost" "8080"]}   ;; 2011-01-06 currently broken with lein 1.4.2
