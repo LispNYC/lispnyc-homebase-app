@@ -34,7 +34,7 @@ It's pretty easy, just run:
     lein deps
     ./start
 
-Look at [http://localhost:8000](http://localhost:8000)
+Look at [http://localhost:8080](http://localhost:8080)
 
 ## WAR Deployed Execution
 
@@ -44,4 +44,4 @@ Because our homebase webapp (home.war) acts as the default application, it can't
     lein deps
     ./build-deploy.sh
 
-Ensure the [lispnyc-appserver](https://github.com/lispnyc/lispnyc-appserver) webapp server is running and poin your browser to *http://localhost:8000*
+Ensure the [lispnyc-appserver](https://github.com/lispnyc/lispnyc-appserver) webapp server is running and poin your browser to *http://localhost:8080*

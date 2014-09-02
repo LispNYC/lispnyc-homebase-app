@@ -1,87 +1,48 @@
 (ns org.lispnyc.webapp.homebase.feed.twitter
-  (:use     org.lispnyc.webapp.homebase.feed.util)
+  (:use     org.lispnyc.webapp.homebase.feed.util
+            org.lispnyc.webapp.homebase.feed.twitter-creds)
   (:require [net.cgrand.enlive-html :as enlive]
             [clj-time.format        :as time]
-            twitter
-            [oauth.client           :as oauth]))
+            twitter.api.restful))
 
-;; not quite rfc822
+;; still not quite rfc822
 (def format-twit (time/formatter "EEE MMM dd HH:mm:ss Z yyyy"))
 
 (defn search [hashtag]
-  (println "fetching twitter-search #" hashtag)
-  (let [data (fetch-url-xml (str "http://search.twitter.com/search.atom?q=%23" hashtag "&count=5"))]
-    (vec (map #(hash-map :type            (keyword (str "tweet-" hashtag))
-                         :pub-date        (parse-date
-                                           (time/formatters :date-time-no-ms)
-                                           (enlive/text (nth % 0)))
-                         :title           (enlive/text (nth % 1))
-                         :user            (enlive/text (nth % 2))
-                         :link            (enlive/text (nth % 3))
-                         :weight          0
-                         :relevance       0.1)
-              ;; note: order is dependent on location in XML
-              (partition 4 (enlive/select data #{[:feed :> :entry :> :published]
-                                                 [:feed :> :entry :> :content]
-                                                 [:feed :> :entry :> :author :> :name]
-                                                 [:feed :> :entry :> :author :> :uri] }))))))
+  (println (str "fetching twitter-search #" hashtag))
+  (let [response (twitter.api.restful/search-tweets :oauth-creds twit-creds :params {:q (str "#" hashtag)})
+        tweets   (:statuses (:body response))]
+    (vec (map #(hash-map :type     (keyword (str "tweet-" hashtag))
+                         :pub-date (parse-date format-twit (:created_at %)) 
+                         :title    (:text %)
+                         :link     (str "https://twitter.com/" (:screen_name (:user %)) "/status/" (:id %))
+                         :weight    0
+                         :relevance 0.1
+                         ) tweets)) ))
+
+(defn fetch-twitter-friends [user-name]
+  (println "fetching twitter home-timeline for" user-name)
+  (let [response   (twitter.api.restful/statuses-home-timeline :oauth-creds twit-creds :params {:screen-name user-name})
+        tweets     (:body response)]
+    (vec (map #(hash-map :type      :tweet-friend
+                         :pub-date  (parse-date format-twit (:created_at %)) 
+                         :title     (:text %)
+                         :link      (str "https://twitter.com/" (:screen_name (:user %)) "/status/" (:id %))
+                         :weight    (:retweet_count %)
+                         :user      (:screen_name (:user %))
+                         :relevance 0.5) tweets)) ))
 
 (defn fetch
   ([hash-tag] (search hash-tag))
-  ([](println "fetching twitter")
-     (let [data (fetch-url-xml (str "https://api.twitter.com/1/statuses/user_timeline.xml?include_entities=true&include_rts=true&screen_name=lispnyc&count=5"))]
-       (vec (map #(hash-map :type            :tweet-lispnyc
-                            :pub-date        (parse-date
-                                              format-twit
-                                              (enlive/text (nth % 0)))
-                            :title           (enlive/text (nth % 1))
-                            :weight          (str->int (enlive/text (nth % 3))) 
-                            :user            "LispNyc"
-                            :link            (str "https://twitter.com/" (enlive/text (nth % 2)))
-                            :relevance       1)
-                 ;; note: order is dependent on location in XML
-                 (partition 4 (enlive/select data #{[:statuses :> :status :> :created_at]
-                                                    [:statuses :> :status :> :text]
-                                                    [:statuses :> :status :> :user :> :name]
-                                                    [:statuses :> :status :> :retweet_count] })))))))
+  ([](println "fetching twitter, our feed")
+     (let [user-name "LispNyc" 
+           response  (twitter.api.restful/statuses-user-timeline :oauth-creds twit-creds :params {:screen-name user-name}) 
+           tweets    (:body response)]
+       (vec (map #(hash-map :type      :tweet-lispnyc
+                            :pub-date  (parse-date format-twit (:created_at %)) 
+                            :title     (:text %)
+                            :link      (str "https://twitter.com/" (:screen_name (:user %)) "/status/" (:id %))
+                            :weight    (:retweet_count %)
+                            :user      user-name
+                            :relevance 1.0) tweets)) )))
 
-(def oauth-consumer
-     (oauth/make-consumer "XLa0uwfmTLK57Z130QE0g"
-                          "gK3mtfemb570z7fZ4SH7X8SDwpSWqEVYSgB1M4PElsY"
-                          "https://api.twitter.com/oauth/request_token"
-                          "https://api.twitter.com/oauth/access_token"
-                          "https://api.twitter.com/oauth/authorize"
-                          :hmac-sha1))
-
-(comment ; uncomment to generate and validate with browser
-  (def oauth-request-token 
-       (oauth/request-token oauth-consumer))
-  (println "authorize with browser: "
-           (oauth/user-approval-uri
-            oauth-consumer (:oauth_token oauth-request-token)))
-  (def atr ; oauth access token response
-     (oauth/access-token oauth-consumer 
-                         oauth-request-token
-                         "put the value from the browser here"))
-  )
-
-(def atr
-     {:oauth_token "166167502-a9AldwBKwmpzWIrZx94gr1zRK6IJFG1WWVzO4qwu",
-      :oauth_token_secret "a7awWBvOyg8G2PKU3iqrf5ssURJj0ArpwbKHe68mMKc",
-      :user_id "166167502", :screen_name "LispNYC"})
-
-(defn fetch-friends []
-  (println "fetching twitter friends")
-  (map #(hash-map :type            :tweet-friend
-                  :pub-date        (parse-date format-twit (:created_at %))
-                  :title           (:text %)                  
-                  :weight          (:retweet_count %)
-                  :user            (:screen_name (:user %))
-                  :link            (str "https://twitter.com/"
-                                        (:screen_name (:user %))
-                                        "/status/"
-                                        (:id_str %))
-                  :relevance 0.5)
-       (twitter/with-oauth
-         oauth-consumer (:oauth_token atr) (:oauth_token_secret atr)
-         (twitter/friends-timeline :count "199"))))

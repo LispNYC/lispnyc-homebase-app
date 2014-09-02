@@ -14,7 +14,7 @@
                  [hiccup "0.3.1"]
                  ;[swank-clojure "1.3.0-SNAPSHOT"]
                  [clj-time "0.4.2"]
-                 [clojure-twitter "1.2.6-SNAPSHOT"] 
+                 [twitter-api "0.7.6"]
                  [com.ecyrd/jspwiki "2.8.4"]
                  [org.clojure/core.memoize "0.5.1"]
                  [png-extract "1.0.4"]

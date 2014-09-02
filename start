@@ -1,2 +1,2 @@
 #!/bin/sh
-lein run localhost 8000
+lein run localhost 8080

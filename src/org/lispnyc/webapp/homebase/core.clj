@@ -364,16 +364,15 @@
   (let [topic    (validate-input (apply str (rest (:uri request)))) ; scrub
         wikipage (wiki/fetch-wikipage topic)]
     (cond (empty? (:content wikipage))                     "404 page not found"
-          (= "lispinsmallprojects.org" (:server-name request)) ((template-wiki-smallprojects wikipage)) ; virtualhost hack
           (= "lispinsummerprojects.org" (:server-name request)) ((template-wiki-smallprojects wikipage)) ; virtualhost hack
-          (= "www.lispinsummerprojects.org" (:server-name request)) ((template-wiki-smallprojects wikipage)) ; virtualhost hack
+          (= "www.lispinsummerprojects.org" (:sperver-name request)) ((template-wiki-smallprojects wikipage)) ; virtualhost hack
           :else                                            ((template-wiki wikipage)))) )
 
 ;;
 ;; Jetty routes
 ;;
 (ww/defroutes app-routes
-  (ww/GET "/"          {params :params :as request} (fn [request] (cond (or (= "lispinsmallprojects.org" (:server-name request)) (= "lispinsummerprojects.org" (:server-name request))) ((template-wiki-smallprojects (wiki/fetch-wikipage "welcome"))) :else ((template-index (wiki/fetch-wikipage "front-page") (fetch-meetup) (take 10 (news/fetch 1))))))) ; virtual host hack
+  (ww/GET "/"          {params :params :as request} (fn [request] (cond (or (= "www.lispinsummerprojects.org" (:server-name request)) (= "lispinsummerprojects.org" (:server-name request))) ((template-wiki-smallprojects (wiki/fetch-wikipage "welcome"))) :else ((template-index (wiki/fetch-wikipage "front-page") (fetch-meetup) (take 10 (news/fetch 1))))))) ; virtual host hack
   (ww/GET "/home"      [] ((template-index (wiki/fetch-wikipage "front-page") (fetch-meetup) (take 10 (news/fetch 1)))))
   (ww/GET "/debug"     [] (debug-page))
   (ww/GET "/meeting"   [] (meeting-page))
@@ -437,5 +436,5 @@
   "For use in standalone operation."
   [& args]
   (if (nil? args)
-    (start-server "localhost" "8000")
+    (start-server "localhost" "8080")
     (start-server (first args) (first (rest args))) ))
