@@ -8,7 +8,7 @@
 ;; still not quite rfc822
 (def format-twit (time/formatter "EEE MMM dd HH:mm:ss Z yyyy"))
 
-(defn search [hashtag]
+(defn- search [hashtag]
   (println (str "fetching twitter-search #" hashtag))
   (let [response (twitter.api.restful/search-tweets :oauth-creds twit-creds :params {:q (str "#" hashtag)})
         tweets   (:statuses (:body response))]
@@ -20,7 +20,7 @@
                          :relevance 0.1
                          ) tweets)) ))
 
-(defn fetch-twitter-friends [user-name]
+(defn fetch-friends [user-name]
   (println "fetching twitter home-timeline for" user-name)
   (let [response   (twitter.api.restful/statuses-home-timeline :oauth-creds twit-creds :params {:screen-name user-name})
         tweets     (:body response)]
