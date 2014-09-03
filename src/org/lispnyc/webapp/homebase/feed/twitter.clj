@@ -1,8 +1,7 @@
 (ns org.lispnyc.webapp.homebase.feed.twitter
   (:use     org.lispnyc.webapp.homebase.feed.util
             org.lispnyc.webapp.homebase.feed.twitter-creds)
-  (:require [net.cgrand.enlive-html :as enlive]
-            [clj-time.format        :as time]
+  (:require [clj-time.format        :as time]
             twitter.api.restful))
 
 ;; still not quite rfc822
