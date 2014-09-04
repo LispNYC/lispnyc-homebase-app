@@ -9,7 +9,7 @@
 
 (defn- search [hashtag]
   (println (str "fetching twitter-search #" hashtag))
-  (let [response (twitter.api.restful/search-tweets :oauth-creds twit-creds :params {:q (str "#" hashtag)})
+  (let [response (twitter.api.restful/search-tweets :oauth-creds twit-creds :params {:q (str "#" hashtag) :count 100})
         tweets   (:statuses (:body response))]
     (vec (map #(hash-map :type     (keyword (str "tweet-" hashtag))
                          :pub-date (parse-date format-twit (:created_at %)) 
@@ -19,9 +19,10 @@
                          :relevance 0.1
                          ) tweets)) ))
 
-(defn fetch-friends [user-name]
-  (println "fetching twitter home-timeline for" user-name)
-  (let [response   (twitter.api.restful/statuses-home-timeline :oauth-creds twit-creds :params {:screen-name user-name})
+(defn fetch-friends 
+  ([] (fetch-friends "LispNyc"))
+  ([user-name] (println "fetching twitter home-timeline for" user-name)
+       (let [response   (twitter.api.restful/statuses-home-timeline :oauth-creds twit-creds :params {:screen-name user-name :count 100})
         tweets     (:body response)]
     (vec (map #(hash-map :type      :tweet-friend
                          :pub-date  (parse-date format-twit (:created_at %)) 
@@ -29,7 +30,7 @@
                          :link      (str "https://twitter.com/" (:screen_name (:user %)) "/status/" (:id %))
                          :weight    (:retweet_count %)
                          :user      (:screen_name (:user %))
-                         :relevance 0.5) tweets)) ))
+                         :relevance 0.5) tweets)) )))
 
 (defn fetch
   ([hash-tag] (search hash-tag))
