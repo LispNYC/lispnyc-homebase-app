@@ -109,11 +109,11 @@
      (html/html
       [:table {:id "news" }(map #(html/html
                      [:tr
-                      [:td [:img {:src (str "/static/images/icon-"
+                      [:td {:class "news-icon"} [:img {:src (str "/static/images/icon-"
                                             (apply str (rest (str (:type %))))
                                             "-32.png")}] ]
                       ;; link the title if there are no embedded links
-                      [:td (if (.contains (make-news-title %) "href")
+                      [:td {:class "news-content"} (if (.contains (make-news-title %) "href")
                              (make-news-title %)
                              [:a {:href (:link %) :target "_blank"} (make-news-title %)])]]) items)]
       (if pager? [:p {:class "pager"} (news-pager page)]) )))
@@ -153,14 +153,13 @@
    "html/template-index.html" [] ;; src and args
    ;; metadata is tricky
    [(and (enlive/has [:meta]) (enlive/attr-has :name "description"))] (enlive/set-attr :content (:title meeting))
-   [(and (enlive/has [:meta]) (enlive/attr-has :name "keywords"))]    (enlive/set-attr :content (:title meeting)) 
    [(and (enlive/has [:meta]) (enlive/attr-has :name "author"))]      (enlive/set-attr :content "Heow Goodman")
 
    ;; make home active
    [:div#header [:a (enlive/nth-of-type 4)]] (enlive/set-attr :class "active")
 
    ;; announcement
-   [:span.announcementHeader] (enlive/html-content (:title announcement))
+   [:span.announcementHeader] (enlive/html-content "news") ; this only ever says front-page
    [:p.announcementContent]   (enlive/html-content (str (:content announcement)))
 
    ;; meeting
@@ -171,15 +170,15 @@
                                                      "<br><br>You <a href=\"/rsvp\">must RSVP here</a> or at <a target=\"_blank\" href=\"http://www.meetup.com/LispNYC/\">Meetup</a>" "")
                                                    "</p><p><a target=\"_blank\" href=\"" (:event-url meeting) "\">more</a></p>"))
    ;; news entry
-   [:span.blogHeader] (enlive/html-content "news")
-   [:p.blogContent]   (enlive/html-content (str (htmlify-news news 1 false) "<p><a href=\"/news\">more news</a></p>"))
+   [:span.blogHeader] (enlive/html-content "news stream")
+   [:p.blogContent]   (enlive/html-content (str (htmlify-news news 1 false) "<p><a href=\"/news\">more</a></p>"))
 
    ;; ad
    [:a#ad]   (enlive/set-attr :href (:url  ad))
    [:img#ad] (enlive/set-attr :src  (:path ad)) 
    
    ;; witty saying
-   [:div#footerLeft]     (enlive/html-content (str "&nbsp;&nbsp;" (make-saying)))   
+   [:div#footerLeft]     (enlive/html-content (make-saying))   
    ))
 )
 
@@ -206,7 +205,7 @@
       [:a#ad]   (enlive/set-attr :href (:url  ad))
       [:img#ad] (enlive/set-attr :src  (:path ad)) 
       
-      [:div#footerLeft]     (enlive/html-content (str "&nbsp;&nbsp;" (make-saying)))
+      [:div#footerLeft]     (enlive/html-content (make-saying))
       )))
 
 (defn template-wiki-smallprojects "wiki on virtualhost"
@@ -229,6 +228,7 @@
 
 (defn only-date [dt]
   (time/date-time (time/year dt) (time/month dt) (time/day dt)) )
+
 
 (defn assoc-meeting-with-video [meeting videos]
   (assoc meeting :video (first (filter #(= (only-date (:time meeting))
@@ -271,7 +271,7 @@
      [:a#ad]   (enlive/set-attr :href (:url  ad))
      [:img#ad] (enlive/set-attr :src  (:path ad))
       
-     [:div#footerLeft]     (enlive/html-content (str "&nbsp;&nbsp;" (make-saying)))
+     [:div#footerLeft]     (enlive/html-content (make-saying))
      )))
 
 ;;
@@ -292,13 +292,21 @@
            ((template-wiki {:title (news-title vp) :content html} 3)) )
    })
 
+(defn news-stats-page []
+  (let [d news/feed-data]
+    (map #(list % (count @(% d))) (keys d)) ))
+
 (defn news-page-rss [params]
   (let [page-in (util/str->int (params "p"))
         page (if (= 0 page-in) 4 page-in)]
     (rssify-news (take 120 (news/fetch page)) page)))
 
-(defn meeting-page []
-  ((template-meetings)))
+(defn meeting-page [] ((template-meetings)))
+
+(defn list-page [params]  
+  (if-let [id (if (empty? (params "*")) nil (params "*"))] ; force a nil 
+    (if-let [message (first (filter #(= id (:id %)) @(:list-lisp news/duped-feed-data)))]
+      ((template-wiki message)))))
 
 ;;
 ;; form processing
@@ -343,49 +351,36 @@
     (mail-generic params "lisp-in-summer-projects-2013-contestant-signup@lispnyc.org" "Lisp in Summer Projects Signup" "signup-thanks"))
   "ok")
 
-
-(comment
-  ;; TODO: use Java or pebble mail, /usr/bin/mail isn't a valid long-term API
-  (defn mail-page []
-    (let [session (. net.sourceforge.pebble.util.MailUtils createSession)
-          blog    (make-blog "/home/heow/pebble/blogs/heow/")
-          config  (new net.sourceforge.pebble.Configuration)
-          context (. net.sourceforge.pebble.PebbleContext getInstance)
-          ]
-      (. config setDataDirectory "/home/heow/pebble") 
-      (. config setSmtpHost "localhost") ; just to make sure
-      (. context setConfiguration config) ; config mail
-      (. net.sourceforge.pebble.util.MailUtils sendMail session blog ["heow@localhost"] "webapp mail test" "foo")
-      "mail sent")))
-
 (defn process-wiki-or-404
   "determine and dispatch on wiki topic, or it's a 404"
   [request]
   (let [topic    (validate-input (apply str (rest (:uri request)))) ; scrub
         wikipage (wiki/fetch-wikipage topic)]
     (cond (empty? (:content wikipage))                     "404 page not found"
-          (= "lispinsummerprojects.org" (:server-name request)) ((template-wiki-smallprojects wikipage)) ; virtualhost hack
-          (= "www.lispinsummerprojects.org" (:sperver-name request)) ((template-wiki-smallprojects wikipage)) ; virtualhost hack
+          (= "lispinsummerprojects.org" (:server-name request))      ((template-wiki-smallprojects wikipage)) ; virtualhost hack
+          (= "www.lispinsummerprojects.org" (:server-name request)) ((template-wiki-smallprojects wikipage)) ; virtualhost hack
           :else                                            ((template-wiki wikipage)))) )
 
 ;;
 ;; Jetty routes
 ;;
 (ww/defroutes app-routes
-  (ww/GET "/"          {params :params :as request} (fn [request] (cond (or (= "www.lispinsummerprojects.org" (:server-name request)) (= "lispinsummerprojects.org" (:server-name request))) ((template-wiki-smallprojects (wiki/fetch-wikipage "welcome"))) :else ((template-index (wiki/fetch-wikipage "front-page") (fetch-meetup) (take 10 (news/fetch 1))))))) ; virtual host hack
-  (ww/GET "/home"      [] ((template-index (wiki/fetch-wikipage "front-page") (fetch-meetup) (take 10 (news/fetch 1)))))
-  (ww/GET "/debug"     [] (debug-page))
-  (ww/GET "/meeting"   [] (meeting-page))
-  (ww/GET "/meetings"  [] (meeting-page))
-  (ww/GET "/news"      {params :params cookies :cookies} (news-page cookies params))
-  (ww/GET "/news.xml"  {params :params}                  (news-page-rss params))
-  (ww/GET "/robots.txt" [] "User-agent: *\r\nDisallow: /wiki/\r\nAllow: /\r\n" )
+  (ww/GET "/"            {params :params :as request} (fn [request] (cond (or (= "www.lispinsummerprojects.org" (:server-name request)) (= "lispinsummerprojects.org" (:server-name request))) ((template-wiki-smallprojects (wiki/fetch-wikipage "welcome"))) :else ((template-index (wiki/fetch-wikipage "front-page") (fetch-meetup) (take 10 (news/fetch 1))))))) ; virtual host hack
+  (ww/GET "/home"        [] ((template-index (wiki/fetch-wikipage "front-page") (fetch-meetup) (take 10 (news/fetch 1)))))
+  (ww/GET "/debug"       [] (debug-page))
+  (ww/GET "/meeting"     [] (meeting-page))
+  (ww/GET "/meetings"    [] (meeting-page))
+  (ww/GET "/list-lisp/*" {params :params} (list-page params))
+  (ww/GET "/news"        {params :params cookies :cookies} (news-page cookies params))
+  (ww/GET "/news-stats"  []  (news-stats-page))
+  (ww/GET "/news.xml"    {params :params}                  (news-page-rss params))
+  (ww/GET "/robots.txt"  [] "User-agent: *\r\nDisallow: /wiki/\r\nAllow: /\r\n" )
   (ww/GET "/favicon.ico" [] (resp/redirect "/static/images/favicon.ico"))
-  
-  (ww/POST "/blog-signup" {params :params} (mail-blog    params))
-  (ww/POST "/rsvp"     {params :params} (mail-rsvp    params))
-  (ww/POST "/contact"  {params :params} (mail-contact params))
-  (ww/POST "/signup"   {params :params} (mail-signup params))
+
+  (ww/POST "/blog-signup"    {params :params} (mail-blog    params))
+  (ww/POST "/rsvp"           {params :params} (mail-rsvp    params))
+  (ww/POST "/contact"        {params :params} (mail-contact params))
+  (ww/POST "/signup"         {params :params} (mail-signup params))
   (ww/POST "/submit-project" {params :params} (mail-submit-project params))
   
   (route/files     "/" {:root "html/"})  ; not used during WAR deployment
@@ -428,9 +423,10 @@
 ;; standalone Jetty server, not used during WAR deployment
 ;;
 (defn start-server [host port]
-  (println "starting Jetty on " host ":" port)
   (if (string? port) (start-server host (Integer/parseInt port)) ; rerun as int
-      (future (jetty/run-jetty app-routes {:host host :port port})) )) ; don't wrap keyword params
+      (do
+        (println "starting lispnyc-homebase-app with Jetty on" host ":" port)
+        (future (jetty/run-jetty app-routes {:host host :port port}))) )) ; don't wrap keyword params
 
 (defn -main
   "For use in standalone operation."

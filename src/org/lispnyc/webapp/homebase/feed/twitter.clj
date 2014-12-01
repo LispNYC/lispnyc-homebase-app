@@ -21,16 +21,17 @@
 
 (defn fetch-friends 
   ([] (fetch-friends "LispNyc"))
-  ([user-name] (println "fetching twitter home-timeline for" user-name)
-       (let [response   (twitter.api.restful/statuses-home-timeline :oauth-creds twit-creds :params {:screen-name user-name :count 100})
-        tweets     (:body response)]
-    (vec (map #(hash-map :type      :tweet-friend
-                         :pub-date  (parse-date format-twit (:created_at %)) 
-                         :title     (:text %)
-                         :link      (str "https://twitter.com/" (:screen_name (:user %)) "/status/" (:id %))
-                         :weight    (:retweet_count %)
-                         :user      (:screen_name (:user %))
-                         :relevance 0.5) tweets)) )))
+  ([user-name] 
+     (println "fetching twitter home-timeline for" user-name)
+     (let [response   (twitter.api.restful/statuses-home-timeline :oauth-creds twit-creds :params {:screen-name user-name :count 100})
+           tweets     (:body response)]
+       (vec (map #(hash-map :type      :tweet-friend
+                            :pub-date  (parse-date format-twit (:created_at %)) 
+                            :title     (:text %)
+                            :link      (str "https://twitter.com/" (:screen_name (:user %)) "/status/" (:id %))
+                            :weight    (:retweet_count %)
+                            :user      (:screen_name (:user %))
+                            :relevance 0.5) tweets)) )))
 
 (defn fetch
   ([hash-tag] (search hash-tag))

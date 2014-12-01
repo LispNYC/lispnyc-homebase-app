@@ -4,6 +4,7 @@
             [clojure.string         :as string]
             [clj-time.format        :as time]))
 
+(def hn-url "https://news.ycombinator.com/")
 
 (defn get-2ago
   "['foo 'bar \"1\" \"hour\" \"ago\" 'baz] => [\"1\" \"hour\"]"
@@ -57,8 +58,8 @@
                                                [(enlive/attr-starts :id "score_")]}))) )
             next    (:href (:attrs (first (enlive/select data [:table [:tr enlive/last-child] :td.title :a]))))
             ]
-        (clojure.set/union articles (fetch (dec count) (str "http://news.ycombinator.com" (slash next))))
+        (clojure.set/union articles (fetch (dec count) (str hn-url (slash next))))
         ))) 
   ([] (filter #(not= nil (:link %)) ; isn't perfect
-              (fetch 3 "http://news.ycombinator.com"))))
+              (fetch 3 hn-url))))
 

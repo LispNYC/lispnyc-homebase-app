@@ -6,12 +6,14 @@
             [clj-time.core                                  :as t]
             [clj-time.format                                :as tfmt]
             [net.cgrand.enlive-html                         :as enlive]
-            [org.lispnyc.webapp.homebase.feed.google-groups :as goog]
+            [org.lispnyc.webapp.homebase.feed.google-plus   :as plus]
             [org.lispnyc.webapp.homebase.feed.pebble-blog   :as blog]
             [org.lispnyc.webapp.homebase.feed.reddit        :as reddit]
             [org.lispnyc.webapp.homebase.feed.twitter       :as twitter]
             [org.lispnyc.webapp.homebase.feed.hacker-news   :as hn]
-            [org.lispnyc.webapp.homebase.feed.planet-lisp   :as pl]))
+            [org.lispnyc.webapp.homebase.feed.planet-lisp   :as pl]
+            [org.lispnyc.webapp.homebase.feed.facebook      :as fb] 
+            [org.lispnyc.webapp.homebase.feed.mail-list     :as list] ))
 
 (def positive-keywords ["turing"
                         "hickey"
@@ -64,6 +66,9 @@
                         "self modify"
                         " ai "
                         " alu "
+                        "immutab"
+                        "sicp"
+                        "datomic"
                         ])
 
 (def negative-keywords ["pronounce"
@@ -146,6 +151,10 @@
                   records)))
   ([records] (filter-by-keyword 1 records)))
 
+(defn filter-by-title
+  "title must be real, > 13 chars"
+  ([records] (vec (filter #(> (count (:title %)) 13 ) records))))
+
 (defn make-dec-vec "make a vec: [5 4 3 2 1 0 0 0 0]"
   [max-val len]
   (take len (apply conj (vec (reverse (range 1 (+ 1 max-val))))
@@ -214,9 +223,14 @@
 (defn in-min [n] (int (* n 1000 60)))
 
 ;; memoize the working functions by time
-(def fetch-google-groups   (memo/memo-ttl #(goog/fetch)             (in-hrs 4)))
+(def fetch-list-lisp       (memo/memo-ttl #(list/fetch)             (in-min 33)))
+(def fetch-fb-lispnyc      (memo/memo-ttl #(fb/fetch)               (in-min 32)))
+(def fetch-fb-lispers      (memo/memo-ttl #(fb/fetch "269890189732269") (in-min 32)))
+(def fetch-plus-lispnyc    (memo/memo-ttl #(plus/fetch)             (in-min 20)))
+(def fetch-plus-cl         (memo/memo-ttl #(plus/fetch "101016130241925650833" 0.5) (in-min 21)))
+(def fetch-plus-clj        (memo/memo-ttl #(plus/fetch "103410768849046117338" 0.5) (in-min 22)))
 (def fetch-pebble-blog     (memo/memo-ttl #(blog/fetch)             (in-min 20)))
-(def fetch-hacker-news     (memo/memo-ttl #(hn/fetch)               (in-hrs 1)))
+(def fetch-hacker-news     (memo/memo-ttl #(hn/fetch)               (in-hrs 4)))
 (def fetch-planet-lisp     (memo/memo-ttl #(pl/fetch)               (in-hrs 6)))
 (def fetch-reddit-lisp     (memo/memo-ttl #(reddit/fetch "lisp")    (in-hrs 1.1)))
 (def fetch-reddit-clojure  (memo/memo-ttl #(reddit/fetch "clojure") (in-hrs 1.2)))
@@ -228,8 +242,14 @@
 (def fetch-twitter-scheme  (memo/memo-ttl #(twitter/fetch "scheme") (in-min 25)))
 
 ;; store the good values
+(def duped-feed-data { :list-lisp (atom []) })
+
 (def feed-data
-  {:google-groups     (atom [])
+  {:fb-lispnyc        (atom [])
+   :fb-lispers        (atom [])
+   :plus-lispnyc      (atom [])
+   :plus-cl           (atom [])
+   :plus-clj          (atom [])
    :pebble-blog       (atom [])
    :hacker-news       (atom [])
    :planet-lisp       (atom [])
@@ -250,24 +270,45 @@
      (deref  (~data-recs ~key))
      (catch java.lang.Exception e# (deref (~data-recs ~key)))))
 
+(defn member? 
+  "true if list contains at least one instance of elt"
+  [list elt]
+  (cond (empty? list) false
+        (= (first list) elt) true
+        true (member? (rest list) elt)))
+
+(defmacro add-new-data! 
+  "only add new records to existing list" 
+  [form data-recs key]
+  `(try
+     (swap! (~data-recs ~key) concat (filter #(not (member? (deref (~data-recs ~key)) %)) ~form))
+     (deref (~data-recs ~key))
+     (catch java.lang.Exception e# (deref (~data-recs ~key)))))
+
 (defn filtered-fetch []
-  (remove-dupes
-   (do ;; release the threads!  Note: it's faster to let the thread assoc-words
-     (.start (Thread. #(set-data! (assoc-words (assoc-weight 10     (fetch-google-groups)))   feed-data :google-groups)))
-     (.start (Thread. #(set-data! (assoc-words (assoc-weight 10     (fetch-pebble-blog)))     feed-data :pebble-blog)))
-     (.start (Thread. #(set-data! (assoc-words (filter-by-keyword   (fetch-hacker-news)))     feed-data :hacker-news)))
-     (.start (Thread. #(set-data! (assoc-words (assoc-weight 10     (fetch-planet-lisp)))     feed-data :planet-lisp)))
-     (.start (Thread. #(set-data! (assoc-words (assoc-weight 8      (fetch-reddit-lisp)))     feed-data :reddit-lisp)))
-     (.start (Thread. #(set-data! (assoc-words (assoc-weight 8      (fetch-reddit-clojure)))  feed-data :reddit-clojure)))
-     (.start (Thread. #(set-data! (assoc-words (assoc-weight 8      (fetch-reddit-scheme)))   feed-data :reddit-scheme)))
-     (.start (Thread. #(set-data! (assoc-words (assoc-weight 10     (fetch-twitter-lispnyc))) feed-data :twitter-lispnyc)))
-     (.start (Thread. #(set-data! (assoc-words (filter-by-keyword   (fetch-twitter-friends))) feed-data :twitter-friends)))
-     (.start (Thread. #(set-data! (assoc-words (filter-by-keyword   (fetch-twitter-clojure))) feed-data :twitter-clojure)))
-     (.start (Thread. #(set-data! (assoc-words (filter-by-keyword 2 (fetch-twitter-lisp)))    feed-data :twitter-lisp)))
-     (.start (Thread. #(set-data! (assoc-words (filter-by-keyword 2 (fetch-twitter-scheme)))  feed-data :twitter-scheme)))
-      
-     ;; meh, send back whatever happens to be in our buckets
-     (vec (flatten (map deref (vals feed-data)))) )))
+  (concat 
+   @(:list-lisp duped-feed-data) ; don't dedup our mailing list
+   (remove-dupes
+    (do ;; release the threads!  Note: it's faster to let the thread assoc-words
+      (.start (Thread. #(set-data! (assoc-words (assoc-weight 10                  (fetch-list-lisp)))       duped-feed-data :list-lisp)))      
+      (.start (Thread. #(set-data! (assoc-words (filter-by-title (assoc-weight 9  (fetch-fb-lispnyc))))     feed-data :fb-lispnyc)))
+      (.start (Thread. #(set-data! (assoc-words (filter-by-title (assoc-weight 9  (fetch-fb-lispers))))     feed-data :fb-lispers)))
+      (.start (Thread. #(set-data! (assoc-words (filter-by-title (assoc-weight 10 (fetch-plus-lispnyc))))   feed-data :plus-lispnyc)))
+      (.start (Thread. #(set-data! (assoc-words (filter-by-title (assoc-weight 8  (fetch-plus-cl))))        feed-data :plus-cl)))
+      (.start (Thread. #(set-data! (assoc-words (filter-by-title (assoc-weight 8  (fetch-plus-clj))))       feed-data :plus-clj)))
+      (.start (Thread. #(set-data! (assoc-words (assoc-weight 10                  (fetch-pebble-blog)))     feed-data :pebble-blog)))
+      (.start (Thread. #(set-data! (assoc-words (filter-by-keyword                (fetch-hacker-news)))     feed-data :hacker-news)))
+      (.start (Thread. #(set-data! (assoc-words (assoc-weight 10                  (fetch-planet-lisp)))     feed-data :planet-lisp)))
+      (.start (Thread. #(set-data! (assoc-words (assoc-weight 8                   (fetch-reddit-lisp)))     feed-data :reddit-lisp)))
+      (.start (Thread. #(set-data! (assoc-words (assoc-weight 8                   (fetch-reddit-clojure)))  feed-data :reddit-clojure)))
+      (.start (Thread. #(set-data! (assoc-words (assoc-weight 8                   (fetch-reddit-scheme)))   feed-data :reddit-scheme)))
+      (.start (Thread. #(set-data! (assoc-words (assoc-weight 10                  (fetch-twitter-lispnyc))) feed-data :twitter-lispnyc)))
+      (.start (Thread. #(set-data! (assoc-words (filter-by-keyword                (fetch-twitter-friends))) feed-data :twitter-friends)))
+      (.start (Thread. #(set-data! (assoc-words (filter-by-keyword                (fetch-twitter-clojure))) feed-data :twitter-clojure)))
+      (.start (Thread. #(set-data! (assoc-words (filter-by-keyword 2              (fetch-twitter-lisp)))    feed-data :twitter-lisp)))
+      (.start (Thread. #(set-data! (assoc-words (filter-by-keyword 2              (fetch-twitter-scheme)))  feed-data :twitter-scheme)))
+      ;; meh, send back whatever happens to be in our buckets
+      (vec (flatten (map deref (vals feed-data)))) ))))
 
 (defn fetch
   ([visits] (weigh-and-sort visits (filtered-fetch)))

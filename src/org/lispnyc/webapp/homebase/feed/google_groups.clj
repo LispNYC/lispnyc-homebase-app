@@ -31,7 +31,7 @@
 
 (defn fetch []
   (println "fetching google-groups...")
-  (let [data (fetch-url (str "http://groups.google.com/a/lispnyc.org/group/lisp/topics"))]
+  (let [data (fetch-url "https://groups.google.com/a/lispnyc.org/forum/#!forum/lisp")]
     (vec (map #(hash-map :type      :lisp-group
                          :link      (str "http://groups.google.com" (:href (:attrs (nth % 0))))
                          :title     (enlive/text (nth % 1))

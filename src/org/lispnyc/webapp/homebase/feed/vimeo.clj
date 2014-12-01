@@ -5,11 +5,6 @@
             [clj-time.coerce        :as tcoerce]
             [clj-time.format        :as tformat] ))
 
-(comment defn parse-date [d]
-  (try
-    (tformat/parse )
-    (catch java.lang.IllegalArgumentException e nil)))
-
 (defn fetch-videos[]
   (let [videos (json/parse-string (fetch-url-raw "http://vimeo.com/api/v2/lispnyc/videos.json"))]
     (map (fn [v] (hash-map

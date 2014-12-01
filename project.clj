@@ -1,7 +1,6 @@
-(defproject org.lispnyc.webapp.homebase "3.1.2"
+(defproject org.lispnyc.webapp.homebase "3.1.8"
   :description "LispNYC's webserver and social integration homebase."
   :url         "https://github.com/LispNYC/lispnyc-homebase-app"
-  ; :run-aliases {:server [org.lispnyc.webapp.homebase.core start-server "localhost" "8080"]}   ;; 2011-01-06 currently broken with lein 1.4.2
   :main org.lispnyc.webapp.homebase.core ; required for main
   :dependencies [
                  [org.clojars.clizzin/jsoup "1.5.1"] ; html2text
@@ -18,7 +17,9 @@
                  [com.ecyrd/jspwiki "2.8.4"]
                  [org.clojure/core.memoize "0.5.1"]
                  [png-extract "1.0.4"]
-                 [org.clojars.toxi/clj-json "0.5.0"]
+                 [org.clojure/data.json "0.2.5"] ; facebook feed
+                 [org.clojars.toxi/clj-json "0.5.0"] ; vimeo TODO: change
+
                  [org.clojars.gfodor/commons-lang "2.5"] ; wiki 
                  [org.clojars.aaroniba/log4j "1.2.16"]   ; wiki 
                  [javax.servlet.jsp "2.1.0.v201004190952"] ; wiki
@@ -56,5 +57,6 @@
   :ring { :handler org.lispnyc.webapp.homebase.core/app-routes
           ; :servlet-class org.lispnyc.webapp.homebase.servlet
          } 
+  :jvm-opts ["-Dhttp.agent=curl/7.27.0"] 
   )
 
