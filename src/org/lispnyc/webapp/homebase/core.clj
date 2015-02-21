@@ -170,7 +170,7 @@
                                                      "<br><br>You <a href=\"/rsvp\">must RSVP here</a> or at <a target=\"_blank\" href=\"http://www.meetup.com/LispNYC/\">Meetup</a>" "")
                                                    "</p><p><a target=\"_blank\" href=\"" (:event-url meeting) "\">more</a></p>"))
    ;; news entry
-   [:span.blogHeader] (enlive/html-content "news stream")
+   [:span.blogHeader] (enlive/html-content "( news stream )")
    [:p.blogContent]   (enlive/html-content (str (htmlify-news news 1 false) "<p><a href=\"/news\">more</a></p>"))
 
    ;; ad
@@ -193,14 +193,20 @@
       ;; header nav
       [:div#header [:a (enlive/nth-of-type active-header-index) ]] (enlive/set-attr :class (if (= 1 active-header-index) "activeLastMenuItem" "active") )
 
-      ;; wipe out announcement and news
+      ;; wipe out announcement
       [:div#announcement] (enlive/content "")
-      [:div#news] (enlive/content "")
+
                       
       [:content]            (enlive/html-content (:content wiki-article))
       [:span.meetingHeader] (enlive/content (:title wiki-article))
       [:p.meetingContent]   (enlive/html-content (:content wiki-article))
 
+      ;; conditionally stuff into blog-content/news
+      [:span.blogHeader]    (cond (= "support" (clojure.string/lower-case (:title wiki-article))) (enlive/html-content "( support levels )"))
+      [:p.blogContent]      (enlive/html-content 
+                             (cond (= "support" (clojure.string/lower-case (:title wiki-article))) (slurp "./webapps/home/WEB-INF/classes/html/lispnyc-support.html") 
+                                   :else "") )
+      
       ;; ad
       [:a#ad]   (enlive/set-attr :href (:url  ad))
       [:img#ad] (enlive/set-attr :src  (:path ad)) 

@@ -4,8 +4,10 @@ lib
 *.log
 homebase-static
 pebbleblog-articles
-html
 etc
+html/
+!src/html/
 src/html/static/
 classes/
 target/
+*creds.clj

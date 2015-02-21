@@ -1,4 +1,4 @@
-(defproject org.lispnyc.webapp.homebase "3.1.8"
+(defproject org.lispnyc.webapp.homebase "3.2.0"
   :description "LispNYC's webserver and social integration homebase."
   :url         "https://github.com/LispNYC/lispnyc-homebase-app"
   :main org.lispnyc.webapp.homebase.core ; required for main
