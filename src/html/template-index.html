@@ -8,34 +8,39 @@
     <title>LispNYC</title>
     <link rel="stylesheet" href="/static/css/foundation.css" />
     <link rel="stylesheet" href="/static/css/foundation-lispnyc.css" />
-    <script src="/static/js/vendor/modernizr.js"></script>
+    <script src="/static/js/vendor/modernizr.js"></script> <!-- foundation -->
   </head>
   <body>
-    
-    <div class="row">
-      <div class="large-12 columns">
-        <img class="title" src="/static/images/logo-tilted.png">
-        <div class="panel title large round button">
-          <h1 class="title"><a href="/">LispNYC</a></h1>
-        </div>
-      </div>
-    </div>
-    
-    <div class="row">
-      <div class="large-2 medium-2 columns show-for-medium-up"></div>
-      <div class="large-10 medium-10 small-12 columns">
-        <div class="nav panel">
-          <ul class="button-group even four-up">
-            <li><a href="/meetings" class="nav tiny round button">meetings</a></li>
-            <li><a href="news" class="nav tiny round button">news stream</a></li>
-            <!-- li><a href="/blog/" class="nav tiny round button">blogs</a></li -->            
-            <li><a href="/connect" class="nav tiny round button">connect</a></li>
-            <li><a href="/support" class="nav tiny round button">support</a></li>
-          </ul>
-        </div>
-      </div>
-    </div> <!-- row -->
 
+    <!-- top bar -->
+    <nav class="top-bar" data-topbar>
+      <ul class="title-area">
+        <li class="name">
+          <h1><a href="/"><img class="title" src="/static/images/lispnyc-logo-light.gif">lisp.nyc</a></h1>
+        </li>
+        <li class="toggle-topbar menu-icon"><a href="#"><span>menu</span></a></li>
+      </ul>
+       
+      <section class="top-bar-section">
+        <ul class="right">          
+          <li><a href="/meetings">meetings</a></li>
+          <li><a href="/connect">connect</a></li>
+          <li><a href="/support">support</a></li>
+          <li class="has-dropdown">
+            <a>resources</a>
+            <ul class="dropdown">
+              <li><a href="/news">news stream</a></li>
+              <li><a href="/learning-lisp">learning lisp</a></li>
+              <li><a href="/watchfaces">smartwatch faces</a></li>
+              <li><a href="http://LispInSummerProjects">Lisp in Summer Projects</a></li>
+            </ul>
+          </li>
+          <li><a href="/about">about</a></li>
+        </ul>
+      </section>
+    </nav>
+    <!-- top bar -->
+    
     <div id="announcement">
     <div class="row show-for-medium-up">
       <div class="large-2 medium-2 columns"></div>
@@ -124,12 +129,23 @@
       </div>
     </div> <!-- row -->
 
-    <script src="js/vendor/jquery.js"></script>
-    <script src="js/foundation.min.js"></script>
+    <!-- foundation -->
+    <script>
+      document.write('<script src=/static/js/vendor/' +
+                              ('__proto__' in {} ? 'zepto' : 'jquery') +
+                              '.js><\/script>')
+    </script>
+    <script src="/static/js/vendor/jquery.js"></script>
+    <script src="/static/js/foundation/foundation.js"></script>
+    <script src="/static/js/foundation/foundation.topbar.js"></script>
+    <script src="/static/js/foundation/foundation.dropdown.js"></script>
+    <!--script src="/static/js/foundation.min.js"></script-->
     <script>
       $(document).foundation();
     </script>
-    <script type="text/javascript"> <!-- google analytics -->
+    
+    <!-- google analytics -->
+    <script type="text/javascript"> 
       var _gaq = _gaq || []; _gaq.push(['_setAccount', 'UA-20563213-1']); _gaq.push(['_trackPageview']);
       (function() { var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true; ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js'; var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s); })();
     </script>
