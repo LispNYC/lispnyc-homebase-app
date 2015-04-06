@@ -8,7 +8,7 @@
                  [org.clojure/clojure-contrib "1.2.0"]
                  [compojure "0.5.2"]
                  [ring/ring-jetty-adapter "0.3.5"]
-                 [enlive "1.0.0-SNAPSHOT"]
+                 [enlive "1.1.5"]
                  [ring/ring-servlet "0.3.5"]
                  [hiccup "0.3.1"]
                  ;[swank-clojure "1.3.0-SNAPSHOT"]
@@ -43,7 +43,7 @@
                  [clojure-complete "0.2.2"] ; debug, tab completion
                  ]
   :plugins [[lein-ring "0.8.3"]      ; build wars
-            [lein-localrepo "0.4.1"] ; access 3rd party jars
+            [lein-localrepo "0.5.3"] ; access 3rd party jars
             ]
 ;  :dev-dependencies [[ring/ring-jetty-adapter "0.3.5"]
 ;                     [ring/ring-devel "0.3.5"]
