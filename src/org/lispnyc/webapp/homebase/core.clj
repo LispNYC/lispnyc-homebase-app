@@ -163,7 +163,7 @@
    [:p.announcementContent]   (enlive/html-content (str (:content announcement)))
 
    ;; meeting
-   [:title]              (enlive/content (str "New York City Lisp User Group: " (:title meeting)))
+   [:title]              (enlive/content (str "lisp.nyc: " (:title meeting)))
    [:span.meetingHeader] (enlive/html-content (str "meeting - " (tformat/unparse (.withZone (tformat/formatter "EEEE, MMMM d, h:mm a") (time/time-zone-for-id "America/New_York")) (:time meeting)) " - <i>" (:title meeting) "</i>"))
    [:p.meetingContent]   (enlive/html-content (str (:description meeting) "<p>Location:<br>"(:venue meeting) "<br>" (:address meeting) "<br>" (:address2 meeting)
                                                    (if (.contains (:venue meeting) "Google")
@@ -197,15 +197,14 @@
       [:div#announcement] (enlive/content "")
 
                       
-      [:content]            (enlive/html-content (:content wiki-article))
+;      [:content]            (enlive/html-content (:content wiki-article))
       [:span.meetingHeader] (enlive/content (:title wiki-article))
-      [:p.meetingContent]   (enlive/html-content (:content wiki-article))
+      [:p.meetingContent]   (enlive/html-content (str (:content wiki-article)
+                                                      (if (= "support" (clojure.string/lower-case (:title wiki-article))) (slurp "./webapps/home/WEB-INF/classes/html/lispnyc-support.html")) ))
 
       ;; conditionally stuff into blog-content/news
-      [:span.blogHeader]    (cond (= "support" (clojure.string/lower-case (:title wiki-article))) (enlive/html-content "( support levels )"))
-      [:p.blogContent]      (enlive/html-content 
-                             (cond (= "support" (clojure.string/lower-case (:title wiki-article))) (slurp "./webapps/home/WEB-INF/classes/html/lispnyc-support.html") 
-                                   :else "") )
+      [:span.blogHeader]    ""
+      [:p.blogContent]      ""
       
       ;; ad
       [:a#ad]   (enlive/set-attr :href (:url  ad))
@@ -250,7 +249,7 @@
         ad                  (make-ad)]
     (enlive/template
      "html/template-index.html" []
-     [:title]              (enlive/content (str "New York City Lisp User Group: Past Meetings" ))
+     [:title]              (enlive/content (str "lisp.nyc: Past Meetings" ))
      
      ;; header nav
      [:div#header [:a (enlive/nth-of-type active-header-index) ]] (enlive/set-attr :class (if (= 1 active-header-index) "activeLastMenuItem" "active") )
