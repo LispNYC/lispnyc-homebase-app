@@ -4,8 +4,7 @@
   :main org.lispnyc.webapp.homebase.core ; required for main
   :dependencies [
                  [org.clojars.clizzin/jsoup "1.5.1"] ; html2text
-                 [org.clojure/clojure "1.3.0"]
-                 [org.clojure/clojure-contrib "1.2.0"]
+                 [org.clojure/clojure "1.7.0"]
                  [compojure "0.5.2"]
                  [ring/ring-jetty-adapter "0.3.5"]
                  [enlive "1.1.5"]

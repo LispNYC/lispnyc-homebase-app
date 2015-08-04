@@ -17,7 +17,7 @@
             [compojure.core                               :as ww]
             [compojure.route                              :as route]
             [net.cgrand.enlive-html                       :as enlive]
-            [clojure.contrib.shell-out                    :as shell]
+            [clojure.java.shell                           :as shell]
             ;[swank.swank]
             [clojure.tools.nrepl.server                   :as nrepl])
   (:import  [java.io]
