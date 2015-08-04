@@ -113,7 +113,7 @@
                                             (apply str (rest (str (:type %))))
                                             "-32.png")}] ]
                       ;; link the title if there are no embedded links
-                      [:td {:class "news-content"} (if (.contains (make-news-title %) "href")
+                      [:td {:class "news-content"} (if (.contains (str (make-news-title %)) "href")
                              (make-news-title %)
                              [:a {:href (:link %) :target "_blank"} (make-news-title %)])]]) items)]
       (if pager? [:p {:class "pager"} (news-pager page)]) )))
@@ -166,7 +166,7 @@
    [:title]              (enlive/content (str "lisp.nyc: " (:title meeting)))
    [:span.meetingHeader] (enlive/html-content (str "meeting - " (tformat/unparse (.withZone (tformat/formatter "EEEE, MMMM d, h:mm a") (time/time-zone-for-id "America/New_York")) (:time meeting)) " - <i>" (:title meeting) "</i>"))
    [:p.meetingContent]   (enlive/html-content (str (:description meeting) "<p>Location:<br>"(:venue meeting) "<br>" (:address meeting) "<br>" (:address2 meeting)
-                                                   (if (.contains (:venue meeting) "Google")
+                                                   (if (.contains (str (:venue meeting)) "Google")
                                                      "<br><br>You <a href=\"/rsvp\">must RSVP here</a> or at <a target=\"_blank\" href=\"http://www.meetup.com/LispNYC/\">Meetup</a>" "")
                                                    "</p><p><a target=\"_blank\" href=\"" (:event-url meeting) "\">more</a></p>"))
    ;; news entry
