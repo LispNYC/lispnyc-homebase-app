@@ -200,11 +200,11 @@
 ;      [:content]            (enlive/html-content (:content wiki-article))
       [:span.meetingHeader] (enlive/content (:title wiki-article))
       [:p.meetingContent]   (enlive/html-content (str (:content wiki-article)
-                                                      (if (= "support" (clojure.string/lower-case (:title wiki-article))) (slurp "./webapps/home/WEB-INF/classes/html/lispnyc-support.html")) ))
+                                                      (if (= "support" (clojure.string/lower-case (str (:title wiki-article)))) (slurp "./webapps/home/WEB-INF/classes/html/lispnyc-support.html")) ))
 
-      ;; conditionally stuff into blog-content/news
-      [:span.blogHeader]    ""
-      [:p.blogContent]      ""
+;      ;; conditionally stuff into blog-content/news
+      [:span.blogHeader]    (enlive/content "")
+      [:p.blogContent]      (enlive/content "")
       
       ;; ad
       [:a#ad]   (enlive/set-attr :href (:url  ad))
@@ -232,8 +232,8 @@
       ))
 
 (defn only-date [dt]
-  (time/date-time (time/year dt) (time/month dt) (time/day dt)) )
-
+  (if (nil? dt) nil
+      (time/date-time (time/year dt) (time/month dt) (time/day dt)) )  )
 
 (defn assoc-meeting-with-video [meeting videos]
   (assoc meeting :video (first (filter #(= (only-date (:time meeting))
