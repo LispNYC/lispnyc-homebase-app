@@ -45,5 +45,5 @@
                             :link      (str "https://twitter.com/" (:screen_name (:user %)) "/status/" (:id %))
                             :weight    (:retweet_count %)
                             :user      user-name
-                            :relevance 1.0) tweets)) )))
+                            :relevance 0.8) tweets)) )))
 

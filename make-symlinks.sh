@@ -20,7 +20,7 @@ ln -s $PWD/src/html .
 # ok I lied, Jetty dosen't like symlinks for routed files, we'll copy them over
 # remember to keep them in sync and out of github
 echo "NOTE: changes made to src/html/static need to be mirrored in ../lispnyc-appserver/homebase-static"
-mkdir src/html/
+mkdir -p src/html/
 cp -vr $PWD/../lispnyc-appserver/homebase-static src/html/static
 ln -s src/html/static homebase-static
 

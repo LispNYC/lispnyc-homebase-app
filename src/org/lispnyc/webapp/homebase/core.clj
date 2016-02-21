@@ -41,7 +41,7 @@
 (defn make-ad
   "Randomly select a PNG file from the ad directory, comment is url"
   []
-  (let [adpath "static/images/ads/"
+  (let [adpath "static/images/partners/"
         file   (rand-nth
                 (filter #(.endsWith (.getName %) ".png")
                         (file-seq (clojure.java.io/file (str "./homebase-" adpath)))))
@@ -169,8 +169,9 @@
                                                    (if (.contains (str (:venue meeting)) "Google")
                                                      "<br><br>You <a href=\"/rsvp\">must RSVP here</a> or at <a target=\"_blank\" href=\"http://www.meetup.com/LispNYC/\">Meetup</a>" "")
                                                    "</p><p><a target=\"_blank\" href=\"" (:event-url meeting) "\">more</a></p>"))
+   
    ;; news entry
-   [:span.blogHeader] (enlive/html-content "( news stream )")
+   [:span.blogHeader] (enlive/html-content "( our technology news )")
    [:p.blogContent]   (enlive/html-content (str (htmlify-news news 1 false) "<p><a href=\"/news\">more</a></p>"))
 
    ;; ad
@@ -336,7 +337,7 @@
       (str "<html><meta http-equiv=\"REFRESH\" content=\"0;url=/" thanks-target "\"></HEAD></html>") )))
 
 (defn mail-rsvp [params]
-  (mail-generic params "heow@lispnyc.org" "LispNYC rsvp" "rsvp-thanks"))
+  (mail-generic params "heow@lispnyc.org rpl@lispnyc.org" "LispNYC rsvp" "rsvp-thanks"))
 
 (defn mail-contact [params]
   (mail-generic params "lisp-in-summer-projects-2013-organizers@lispnyc.org" "LispNYC contact" "contact-thanks"))
