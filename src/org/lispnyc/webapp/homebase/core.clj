@@ -232,6 +232,35 @@
                                    :else "<!-- a href=\"/donate\"><img src=\"/static/images-sp/sponsor.png\"></a -->") ) ;; TODO fix me
       ))
 
+(defn template-wiki-clojurebridge "do the same with the wiki data"
+  ([wiki-article] (template-wiki-clojurebridge wiki-article 4 (make-ad)))
+  ([wiki-article active-header-index] (template-wiki-clojurebridge wiki-article active-header-index (make-ad)))
+  ([wiki-article active-header-index ad]
+   (enlive/template
+      "html/template-clojurebridge.html" []
+      [:title]              (enlive/content (str "Clojurebridge LispNYC: " (:title wiki-article)))
+
+      ;; header nav
+      [:div#header [:a (enlive/nth-of-type active-header-index) ]] (enlive/set-attr :class (if (= 1 active-header-index) "activeLastMenuItem" "active") )
+
+      ;; wipe out announcement
+      [:div#announcement] (enlive/content "")
+
+      [:span.meetingHeader] (enlive/content "welcome")
+      [:p.meetingContent]   (enlive/html-content (str (:content wiki-article)))
+
+;      ;; conditionally stuff into blog-content/news
+      [:span.blogHeader]    (enlive/content "( coming soon )")
+      [:p.blogContent]      (enlive/content "MAY 2017")
+      
+      ;; ad
+      [:a#ad]   (enlive/set-attr :href (:url  ad))
+      [:img#ad] (enlive/set-attr :src  (:path ad)) 
+      
+      [:div#footerLeft]     (enlive/html-content (make-saying))
+      )
+   ))
+
 (defn only-date [dt]
   (if (nil? dt) nil
       (time/date-time (time/year dt) (time/month dt) (time/day dt)) )  )
@@ -362,16 +391,19 @@
   [request]
   (let [topic    (validate-input (apply str (rest (:uri request)))) ; scrub
         wikipage (wiki/fetch-wikipage topic)]
-    (cond (empty? (:content wikipage))                     "404 page not found"
-          (= "lispinsummerprojects.org" (:server-name request))      ((template-wiki-smallprojects wikipage)) ; virtualhost hack
+    (cond (empty? (:content wikipage))                              "404 page not found"
+          (= "clojurebridge.lispnyc.org"    (:server-name request)) ((template-wiki-clojurebridge wikipage)) ; virtualhost hack
+          (= "clojurebridge.lisp.nyc"       (:server-name request)) ((template-wiki-clojurebridge wikipage)) ; virtualhost hack
+          (= "lispinsummerprojects.org"     (:server-name request)) ((template-wiki-smallprojects wikipage)) ; virtualhost hack
           (= "www.lispinsummerprojects.org" (:server-name request)) ((template-wiki-smallprojects wikipage)) ; virtualhost hack
-          :else                                            ((template-wiki wikipage)))) )
+          :else                                                     ((template-wiki wikipage))
+          )))
 
 ;;
 ;; Jetty routes
 ;;
 (ww/defroutes app-routes
-  (ww/GET "/"            {params :params :as request} (fn [request] (cond (or (= "www.lispinsummerprojects.org" (:server-name request)) (= "lispinsummerprojects.org" (:server-name request))) ((template-wiki-smallprojects (wiki/fetch-wikipage "welcome"))) :else ((template-index (wiki/fetch-wikipage "front-page") (fetch-meetup) (take 10 (news/fetch 1))))))) ; virtual host hack
+  (ww/GET "/"            {params :params :as request} (fn [request] (cond (or (= "www.lispinsummerprojects.org" (:server-name request)) (= "lispinsummerprojects.org" (:server-name request))) ((template-wiki-smallprojects (wiki/fetch-wikipage "welcome"))) (or (= "clojurebridge.lispnyc.org" (:server-name request)) (= "clojurebridge.lisp.nyc" (:server-name request))) ((template-wiki-clojurebridge (wiki/fetch-wikipage "clojurebridge"))) :else ((template-index (wiki/fetch-wikipage "front-page") (fetch-meetup) (take 10 (news/fetch 1))))) )) ; virtual host hack
   (ww/GET "/home"        [] ((template-index (wiki/fetch-wikipage "front-page") (fetch-meetup) (take 10 (news/fetch 1)))))
   (ww/GET "/debug"       [] (debug-page))
   (ww/GET "/meeting"     [] (meeting-page))
