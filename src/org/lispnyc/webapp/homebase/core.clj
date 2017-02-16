@@ -238,7 +238,7 @@
   ([wiki-article active-header-index ad]
    (enlive/template
       "html/template-clojurebridge.html" []
-      [:title]              (enlive/content (str "Clojurebridge LispNYC: " (:title wiki-article)))
+      [:title]              (enlive/content (str "ClojureBridge LispNYC: " (:title wiki-article)))
 
       ;; header nav
       [:div#header [:a (enlive/nth-of-type active-header-index) ]] (enlive/set-attr :class (if (= 1 active-header-index) "activeLastMenuItem" "active") )
@@ -246,13 +246,9 @@
       ;; wipe out announcement
       [:div#announcement] (enlive/content "")
 
-      [:span.meetingHeader] (enlive/content "welcome")
+      [:span.meetingHeader] (enlive/content "")
       [:p.meetingContent]   (enlive/html-content (str (:content wiki-article)))
 
-;      ;; conditionally stuff into blog-content/news
-      [:span.blogHeader]    (enlive/content "( coming soon )")
-      [:p.blogContent]      (enlive/content "MAY 2017")
-      
       ;; ad
       [:a#ad]   (enlive/set-attr :href (:url  ad))
       [:img#ad] (enlive/set-attr :src  (:path ad)) 
