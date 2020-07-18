@@ -1,6 +1,5 @@
 (ns org.lispnyc.webapp.homebase.core
-  (:require [org.lispnyc.webapp.homebase.feed.pebble-blog :as pebble]
-            [org.lispnyc.webapp.homebase.feed.meetup      :as meetup]
+  (:require [org.lispnyc.webapp.homebase.feed.meetup      :as meetup]
             [org.lispnyc.webapp.homebase.feed.vimeo       :as vimeo]
             [org.lispnyc.webapp.homebase.feed.wiki        :as wiki]
             [org.lispnyc.webapp.homebase.feed.util        :as util] 
@@ -19,7 +18,8 @@
             [net.cgrand.enlive-html                       :as enlive]
             [clojure.java.shell                           :as shell]
             ;[swank.swank]
-            [clojure.tools.nrepl.server                   :as nrepl])
+            ;[clojure.tools.nrepl.server                   :as nrepl]
+            )
   (:import  [java.io]
             [java.util]
             [com.ecyrd.jspwiki]
@@ -57,19 +57,31 @@
    :past-meetups (atom [])
    :videos       (atom []) })
 
-(def do-fetch-meetup       (memo/memo-ttl #(meetup/fetch-meetup) (news/in-min 10)))
+;(def do-fetch-meetup       (memo/memo-ttl #(meetup/fetch-meetup) (news/in-min 10)))
 (def do-fetch-past-meetups (memo/memo-ttl #(meetup/fetch-past-meetups) (news/in-min 10)))
 (def do-fetch-videos       (memo/memo-ttl #(vimeo/fetch-videos) (news/in-min 10)))
 
 ;; see news for async/error details
 ;; TODO: macroify
 (defn fetch-meetup []
-  (.start (Thread. #(news/set-data! (do-fetch-meetup) core-cache :meetup)))
-  (deref (:meetup core-cache)))
+  ;(.start (Thread. #(news/set-data! (do-fetch-meetup) core-cache :meetup)))
+                                        ;(deref (:meetup core-cache))
+  ;{
+  ;   :title "meeting titile"
+  ;   :description "long description"
+  ;   :time "Mar 26, 1969"
+  ;   :venue "venue"
+  ;   :address "address"
+  ;   :address2 "more address"
+  ; :event-url "http://example.com" }
+  (wiki/fetch-wikipage "next-meeting")
+  )
 
 (defn fetch-past-meetups []
-  (.start (Thread. #(news/set-data! (do-fetch-past-meetups) core-cache :past-meetups)))
-  (deref (:past-meetups core-cache)))
+  ;(.start (Thread. #(news/set-data! (do-fetch-past-meetups) core-cache :past-meetups)))
+                                        ;(deref (:past-meetups core-cache))
+  nil
+  )
 
 (defn fetch-videos []
   (.start (Thread. #(news/set-data! (do-fetch-videos) core-cache :videos)))
@@ -147,6 +159,7 @@
 ;;
 ;; templates
 ;;
+
 (defn template-index "Associate the announcemet, meeting and news entry with the html."
   ([announcement meeting news] (template-index announcement meeting news (make-ad)))
   ([announcement meeting news ad] (enlive/template
@@ -164,11 +177,8 @@
 
    ;; meeting
    [:title]              (enlive/content (str "lisp.nyc: " (:title meeting)))
-   [:span.meetingHeader] (enlive/html-content (str "meeting - " (tformat/unparse (.withZone (tformat/formatter "EEEE, MMMM d, h:mm a") (time/time-zone-for-id "America/New_York")) (:time meeting)) " - <i>" (:title meeting) "</i>"))
-   [:p.meetingContent]   (enlive/html-content (str (:description meeting) "<p>Location:<br>"(:venue meeting) "<br>" (:address meeting) "<br>" (:address2 meeting)
-                                                   (if (.contains (str (:venue meeting)) "Google")
-                                                     "<br><br>You <a href=\"/rsvp\">must RSVP here</a> or at <a target=\"_blank\" href=\"http://www.meetup.com/LispNYC/\">Meetup</a>" "")
-                                                   "</p><p><a target=\"_blank\" href=\"" (:event-url meeting) "\">more</a></p>"))
+   [:span.meetingHeader] (enlive/html-content (str " next meeting "))
+   [:p.meetingContent]   (enlive/html-content (str (:content meeting)))
    
    ;; news entry
    [:span.blogHeader] (enlive/html-content "( our technology news )")
@@ -310,8 +320,8 @@
 ;;
 (defn debug-page []
   ;(future (swank.swank/start-repl))
-  (future (nrepl/start-server :port 4006))
-  "NREPL debugging started on localhost, jack-in to :4006 kind sir.")
+  ;(future (nrepl/start-server :port 4006))
+  "NREPL debugging not supported")
 
 (defn news-page [cookies params]
   {:cookies { "visits" (str (incstr (:value (cookies "visits")))) }
@@ -399,7 +409,10 @@
 ;; Jetty routes
 ;;
 (ww/defroutes app-routes
-  (ww/GET "/"            {params :params :as request} (fn [request] (cond (or (= "www.lispinsummerprojects.org" (:server-name request)) (= "lispinsummerprojects.org" (:server-name request))) ((template-wiki-smallprojects (wiki/fetch-wikipage "welcome"))) (or (= "clojurebridge.lispnyc.org" (:server-name request)) (= "clojurebridge.lisp.nyc" (:server-name request))) ((template-wiki-clojurebridge (wiki/fetch-wikipage "clojurebridge"))) :else ((template-index (wiki/fetch-wikipage "front-page") (fetch-meetup) (take 10 (news/fetch 1))))) )) ; virtual host hack
+  (ww/GET "/"            {params :params :as request}
+          (fn [request] (cond (or (= "www.lispinsummerprojects.org" (:server-name request)) (= "lispinsummerprojects.org" (:server-name request))) ((template-wiki-smallprojects (wiki/fetch-wikipage "welcome")))
+                              (or (= "clojurebridge.lispnyc.org"    (:server-name request)) (= "clojurebridge.lisp.nyc"   (:server-name request))) ((template-wiki-clojurebridge (wiki/fetch-wikipage "clojurebridge")))
+                              :else                                                                                                                ((template-index (wiki/fetch-wikipage "front-page") (fetch-meetup) (take 10 (news/fetch 1))))) )) ; virtual host hack
   (ww/GET "/home"        [] ((template-index (wiki/fetch-wikipage "front-page") (fetch-meetup) (take 10 (news/fetch 1)))))
   (ww/GET "/debug"       [] (debug-page))
   (ww/GET "/meeting"     [] (meeting-page))
